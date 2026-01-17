@@ -1,1 +1,7 @@
+/* Google Fonts - 픽셀 폰트 */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 @import "tailwindcss";
+
+/* 랜딩 화면 스타일 */
+@import "./styles/landing.css";
