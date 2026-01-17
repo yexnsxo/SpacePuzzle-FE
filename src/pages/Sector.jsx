@@ -1,21 +1,94 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
+
+const SECTOR_SLUGS = {
+  'solar-system': 'solar-system',
+  '태양계': 'solar-system',
+  'exo-systems': 'exo-systems',
+  '외계 행성계': 'exo-systems',
+  'nebulae': 'nebulae',
+  '성운': 'nebulae',
+  'galaxies': 'galaxies',
+  '은하': 'galaxies',
+  'deep-space-extremes': 'deep-space-extremes',
+  '우주의 심연': 'deep-space-extremes',
+};
+
+const resolveSectorSlug = (value) => {
+  if (!value || typeof value !== 'string') {
+    return 'solar-system';
+  }
+  return SECTOR_SLUGS[value] || 'solar-system';
+};
 
 const Sector = () => {
   const navigate = useNavigate();
-  
-  const sectorData = {
-    name: '태양계',
-    nameEn: 'Solar System',
-    requiredStars: 0,
-    description: '태양을 중심으로 8개의 행성과 수많은 소행성, 혜성들이 공전하는 우리의 고향 행성계입니다.',
-    celestialBodies: [
-      { id: 1, name: '수성', nameEn: 'Mercury', locked: false },
-      { id: 2, name: '금성', nameEn: 'Venus', locked: false },
-      { id: 3, name: '지구', nameEn: 'Earth', locked: false },
-      { id: 4, name: '화성', nameEn: 'Mars', locked: true },
-      { id: 5, name: '목성', nameEn: 'Jupiter', locked: true },
-      { id: 6, name: '토성', nameEn: 'Saturn', locked: true },
-    ],
+  const location = useLocation();
+  const [sectorData, setSectorData] = useState(null);
+  const [celestialBodies, setCelestialBodies] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const sectorSlug = resolveSectorSlug(location.state?.sectorSlug || location.state?.sector);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchSectorData = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+        const response = await fetch(
+          `https://spacepuzzle.onrender.com/sectors/${sectorSlug}/celestial-objects`,
+          { headers, signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`섹터 데이터를 불러오지 못했습니다. (${response.status})`);
+        }
+
+        const payload = await response.json();
+        const normalizedBodies = (payload?.celestialObjects || []).map((body) => ({
+          id: body.id,
+          name: body.title || body.name || '',
+          nameEn: body.nameEn || '',
+          locked: Boolean(body.locked),
+        }));
+
+        if (isMounted) {
+          setSectorData(payload?.sector || null);
+          setCelestialBodies(normalizedBodies);
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        if (isMounted) {
+          setLoadError(error.message || '섹터 데이터를 불러오는 중 오류가 발생했습니다.');
+          setSectorData(null);
+          setCelestialBodies([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchSectorData();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [sectorSlug]);
+
+  const handleEnterGameplay = () => {
+    if (isLoading || loadError) return;
+    navigate('/gameplay', { state: { sectorSlug } });
   };
 
   return (
@@ -46,51 +119,68 @@ const Sector = () => {
 
       <div className="relative z-10 flex items-center justify-center h-full px-8">
         <div className="max-w-4xl w-full bg-gray-900 bg-opacity-90 rounded-2xl p-8 border-2 border-blue-500 shadow-2xl">
-          <div className="text-center mb-6">
-            <h1 className="pixel-font text-5xl text-white mb-2">{sectorData.name}</h1>
-            <p className="text-blue-400 text-xl mb-4">{sectorData.nameEn}</p>
-            
-            <div className="inline-flex items-center gap-2 bg-yellow-600 bg-opacity-30 border border-yellow-500 rounded-full px-4 py-2">
-              <span className="text-2xl">⭐</span>
-              <span className="pixel-font text-white">필요한 별: {sectorData.requiredStars}개</span>
+          {isLoading ? (
+            <div className="text-center text-gray-400 pixel-font text-xl py-12">로딩 중...</div>
+          ) : loadError ? (
+            <div className="text-center text-red-400 py-12">
+              <p className="pixel-font text-xl mb-2">데이터를 불러오지 못했습니다</p>
+              <p className="text-sm text-gray-400">{loadError}</p>
             </div>
-          </div>
-
-          <div className="bg-gray-800 bg-opacity-70 rounded-lg p-4 mb-6">
-            <p className="text-gray-300 leading-relaxed">{sectorData.description}</p>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="pixel-font text-2xl text-white mb-4 flex items-center gap-2">
-              <span>🌍</span>
-              <span>탐험 가능한 천체</span>
-            </h3>
-            
-            <div className="grid grid-cols-3 gap-4">
-              {sectorData.celestialBodies.map((body) => (
-                <div
-                  key={body.id}
-                  className="relative bg-gray-800 rounded-lg p-4 border-2 border-gray-600 opacity-80"
-                >
-                  <div 
-                    className="w-20 h-20 mx-auto rounded-full mb-3 bg-gray-700"
-                    style={{
-                      filter: 'grayscale(100%)',
-                    }}
-                  />
-                  
-                  <p className="pixel-font text-center text-white text-sm">{body.name}</p>
-                  <p className="text-center text-gray-400 text-xs">{body.nameEn}</p>
+          ) : (
+            <>
+              <div className="text-center mb-6">
+                <h1 className="pixel-font text-5xl text-white mb-2">{sectorData?.name || '섹터'}</h1>
+                <p className="text-blue-400 text-xl mb-4">{sectorData?.nameEn || ''}</p>
+                
+                <div className="inline-flex items-center gap-2 bg-yellow-600 bg-opacity-30 border border-yellow-500 rounded-full px-4 py-2">
+                  <span className="text-2xl">⭐</span>
+                  <span className="pixel-font text-white">필요한 별: {sectorData?.requiredStars ?? 0}개</span>
                 </div>
-              ))}
-            </div>
-            <p className="text-gray-400 text-center text-sm mt-3">※ 섹터 진입 후 선택 가능</p>
-          </div>
+              </div>
+
+              <div className="bg-gray-800 bg-opacity-70 rounded-lg p-4 mb-6">
+                <p className="text-gray-300 leading-relaxed">{sectorData?.description || '섹터 설명이 없습니다.'}</p>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="pixel-font text-2xl text-white mb-4 flex items-center gap-2">
+                  <span>🌍</span>
+                  <span>탐험 가능한 천체</span>
+                </h3>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  {celestialBodies.map((body) => (
+                    <div
+                      key={body.id}
+                      className={`relative bg-gray-800 rounded-lg p-4 border-2 ${
+                        body.locked ? 'border-gray-600 opacity-60' : 'border-blue-500 opacity-90'
+                      }`}
+                    >
+                      <div 
+                        className="w-20 h-20 mx-auto rounded-full mb-3 bg-gray-700"
+                        style={{
+                          filter: 'grayscale(100%)',
+                        }}
+                      />
+                      
+                      <p className="pixel-font text-center text-white text-sm">{body.name}</p>
+                      <p className="text-center text-gray-400 text-xs">{body.nameEn}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-400 text-center text-sm mt-3">※ 섹터 진입 후 선택 가능</p>
+              </div>
+            </>
+          )}
 
           <div className="text-center">
             <button
-              onClick={() => navigate('/gameplay')}
-              className="pixel-font text-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-12 py-4 rounded-lg transition-all transform hover:scale-105 border-2 border-blue-400 shadow-lg"
+              type="button"
+              onClick={handleEnterGameplay}
+              disabled={isLoading || Boolean(loadError)}
+              className={`pixel-font text-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-12 py-4 rounded-lg transition-all transform hover:scale-105 border-2 border-blue-400 shadow-lg ${
+                isLoading || loadError ? 'opacity-60 cursor-not-allowed hover:scale-100' : ''
+              }`}
               style={{
                 boxShadow: '0 0 30px rgba(59, 130, 246, 0.5)',
               }}

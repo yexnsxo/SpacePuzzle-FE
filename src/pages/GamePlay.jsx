@@ -1,13 +1,113 @@
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { solarSystemBodies } from '../data/celestialData';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
+
+const SECTOR_SLUGS = {
+  'solar-system': 'solar-system',
+  '태양계': 'solar-system',
+  'exo-systems': 'exo-systems',
+  '외계 행성계': 'exo-systems',
+  'nebulae': 'nebulae',
+  '성운': 'nebulae',
+  'galaxies': 'galaxies',
+  '은하': 'galaxies',
+  'deep-space-extremes': 'deep-space-extremes',
+  '우주의 심연': 'deep-space-extremes',
+};
+
+const DIFFICULTY_LABELS = {
+  1: '쉬움',
+  2: '보통',
+  3: '어려움',
+  4: '매우 어려움',
+  5: '극한',
+};
+
+const resolveSectorSlug = (value) => {
+  if (!value || typeof value !== 'string') {
+    return 'solar-system';
+  }
+  return SECTOR_SLUGS[value] || 'solar-system';
+};
 
 const GamePlay = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedBody, setSelectedBody] = useState(null);
-  
-  // 실제 천체 데이터 사용
-  const celestialBodies = solarSystemBodies;
+  const [celestialBodies, setCelestialBodies] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const sectorSlug = resolveSectorSlug(location.state?.sectorSlug || location.state?.sector);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchCelestialBodies = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+        const response = await fetch(
+          `https://spacepuzzle.onrender.com/sectors/${sectorSlug}/celestial-objects`,
+          { headers, signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`천체 데이터를 불러오지 못했습니다. (${response.status})`);
+        }
+
+        const payload = await response.json();
+        const normalizedBodies = (payload?.celestialObjects || [])
+          .map((body) => {
+            const difficultyValue = Number(body.difficulty);
+            return {
+              id: body.id,
+              nasaId: body.nasaId,
+              name: body.title || body.name || '',
+              nameEn: body.nameEn || '',
+              description: body.description || '',
+              image: body.imageUrl || body.image || null,
+              locked: Boolean(body.locked),
+              requiredStars: body.requiredStars ?? payload?.sector?.requiredStars ?? 0,
+              difficulty: difficultyValue,
+              difficultyKo: DIFFICULTY_LABELS[difficultyValue] || '보통',
+              gridSize: body.gridSize || 3,
+              rewardStars: body.rewardStars || 0,
+              puzzleType: body.puzzleType,
+              displayOrder: body.displayOrder ?? 0,
+              cleared: Boolean(body.cleared),
+            };
+          })
+          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+        if (isMounted) {
+          setCelestialBodies(normalizedBodies);
+          setSelectedBody(null);
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        if (isMounted) {
+          setLoadError(error.message || '천체 데이터를 불러오는 중 오류가 발생했습니다.');
+          setCelestialBodies([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchCelestialBodies();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [sectorSlug]);
 
   const handleBodyClick = (body) => {
     if (!body.locked) {
@@ -53,65 +153,74 @@ const GamePlay = () => {
           <div className="max-w-3xl w-full">
             <h2 className="pixel-font text-4xl text-white mb-8 text-center">천체 선택</h2>
             
-            <div className="grid grid-cols-3 gap-6">
-              {celestialBodies.map((body) => (
-                <div
-                  key={body.id}
-                  onClick={() => handleBodyClick(body)}
-                  className={`relative bg-gray-900 bg-opacity-80 rounded-xl p-6 border-2 transition-all ${
-                    body.locked
-                      ? 'border-gray-600 opacity-50 cursor-not-allowed'
-                      : selectedBody?.id === body.id
-                      ? 'border-yellow-400 shadow-lg shadow-yellow-500/50 scale-105'
-                      : 'border-blue-500 hover:border-blue-400 cursor-pointer hover:scale-105'
-                  }`}
-                >
-                  {/* 천체 이미지 또는 플레이스홀더 */}
-                  {body.image ? (
-                    <img
-                      src={body.image}
-                      alt={body.name}
-                      className={`w-28 h-28 mx-auto rounded-full mb-4 object-cover ${
-                        body.locked ? 'filter grayscale' : 'filter grayscale'
-                      }`}
-                      style={{
-                        boxShadow: body.locked ? 'none' : '0 0 30px rgba(150, 150, 150, 0.5)',
-                      }}
-                    />
-                  ) : (
-                    <div 
-                      className={`w-28 h-28 mx-auto rounded-full mb-4 ${
-                        body.locked ? 'bg-gray-700' : 'bg-gradient-to-br from-gray-300 to-gray-600'
-                      }`}
-                      style={{
-                        filter: 'grayscale(100%)',
-                        boxShadow: body.locked ? 'none' : '0 0 30px rgba(150, 150, 150, 0.5)',
-                      }}
-                    />
-                  )}
-                  
-                  <p className="pixel-font text-center text-white text-lg mb-1">{body.name}</p>
-                  <p className="text-center text-gray-400 text-sm">{body.nameEn}</p>
-                  
-                  {body.locked && (
-                    <>
-                      <div className="absolute top-4 right-4 text-3xl">🔒</div>
-                      <p className="text-center text-yellow-500 text-xs mt-2">⭐ {body.requiredStars}개 필요</p>
-                    </>
-                  )}
-                  
-                  {body.cleared && !body.locked && (
-                    <div className="absolute top-4 right-4 text-2xl">✅</div>
-                  )}
-                  
-                  {selectedBody?.id === body.id && (
-                    <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-8 h-8 flex items-center justify-center text-xl">
-                      ✓
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="text-center text-gray-400 pixel-font text-xl">로딩 중...</div>
+            ) : loadError ? (
+              <div className="text-center text-red-400">
+                <p className="pixel-font text-xl mb-2">데이터를 불러오지 못했습니다</p>
+                <p className="text-sm text-gray-400">{loadError}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-6">
+                {celestialBodies.map((body) => (
+                  <div
+                    key={body.id}
+                    onClick={() => handleBodyClick(body)}
+                    className={`relative bg-gray-900 bg-opacity-80 rounded-xl p-6 border-2 transition-all ${
+                      body.locked
+                        ? 'border-gray-600 opacity-50 cursor-not-allowed'
+                        : selectedBody?.id === body.id
+                        ? 'border-yellow-400 shadow-lg shadow-yellow-500/50 scale-105'
+                        : 'border-blue-500 hover:border-blue-400 cursor-pointer hover:scale-105'
+                    }`}
+                  >
+                    {/* 천체 이미지 또는 플레이스홀더 */}
+                    {body.image ? (
+                      <img
+                        src={body.image}
+                        alt={body.name}
+                        className={`w-28 h-28 mx-auto rounded-full mb-4 object-cover ${
+                          body.locked ? 'filter grayscale' : 'filter grayscale'
+                        }`}
+                        style={{
+                          boxShadow: body.locked ? 'none' : '0 0 30px rgba(150, 150, 150, 0.5)',
+                        }}
+                      />
+                    ) : (
+                      <div 
+                        className={`w-28 h-28 mx-auto rounded-full mb-4 ${
+                          body.locked ? 'bg-gray-700' : 'bg-gradient-to-br from-gray-300 to-gray-600'
+                        }`}
+                        style={{
+                          filter: 'grayscale(100%)',
+                          boxShadow: body.locked ? 'none' : '0 0 30px rgba(150, 150, 150, 0.5)',
+                        }}
+                      />
+                    )}
+                    
+                    <p className="pixel-font text-center text-white text-lg mb-1">{body.name}</p>
+                    <p className="text-center text-gray-400 text-sm">{body.nameEn}</p>
+                    
+                    {body.locked && (
+                      <>
+                        <div className="absolute top-4 right-4 text-3xl">🔒</div>
+                        <p className="text-center text-yellow-500 text-xs mt-2">⭐ {body.requiredStars}개 필요</p>
+                      </>
+                    )}
+                    
+                    {body.cleared && !body.locked && (
+                      <div className="absolute top-4 right-4 text-2xl">✅</div>
+                    )}
+                    
+                    {selectedBody?.id === body.id && (
+                      <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-8 h-8 flex items-center justify-center text-xl">
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

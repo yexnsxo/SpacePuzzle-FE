@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["src/*"] // '@' 별칭을 'src' 폴더로 설정 (모듈 경로 참조 시 간단하게 사용 가능)
     },
-    "types": ["vite/client"] // Vite 프로젝트에서 자동 완성 및 타입 정보를 제공 (Vite 관련 타입을 포함)
+    "types": ["vite/client"], // Vite 프로젝트에서 자동 완성 및 타입 정보를 제공 (Vite 관련 타입을 포함)
+    "lib": ["DOM", "ES2017"] // padStart 등 ES2017 전역 타입 포함
   },
   "include": [
     "src/**/*.d.ts", // 'src' 폴더 내에 있는 모든 타입 정의 파일 포함
