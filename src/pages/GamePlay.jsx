@@ -66,6 +66,7 @@ const GamePlay = () => {
             const difficultyValue = Number(body.difficulty);
             return {
               id: body.id,
+              nasaId: body.nasaId,
               name: body.title || body.name || '',
               nameEn: body.nameEn || '',
               description: body.description || '',

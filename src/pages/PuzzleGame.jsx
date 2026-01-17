@@ -4,6 +4,17 @@ import { Piece } from '../game/puzzle/Piece';
 import { Group } from '../game/puzzle/Group';
 import { PuzzleEngine } from '../game/puzzle/PuzzleEngine';
 import { drawPuzzleShape } from '../game/puzzle/utils';
+import { supabase } from '../supabaseClient';
+
+const createSeededRng = (seed) => {
+  let value = seed >>> 0;
+  return () => {
+    value += 0x6D2B79F5;
+    let t = Math.imul(value ^ (value >>> 15), 1 | value);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
 
 const PuzzleGame = () => {
   const navigate = useNavigate();
@@ -18,6 +29,10 @@ const PuzzleGame = () => {
     gridSize: 3,
     image: null,
   };
+
+  const [puzzleData, setPuzzleData] = useState(null);
+  const [isPuzzleLoading, setIsPuzzleLoading] = useState(true);
+  const [puzzleError, setPuzzleError] = useState(null);
 
   const [time, setTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -35,6 +50,75 @@ const PuzzleGame = () => {
   const CANVAS_WIDTH = 1200;
   const CANVAS_HEIGHT = 800;
 
+  const nasaIdFromState = location.state?.nasaId
+    || celestialBody.nasaId
+    || (typeof celestialBody.nameEn === 'string' ? celestialBody.nameEn.toLowerCase() : null)
+    || 'earth';
+
+  const puzzleSeed = puzzleData?.puzzleConfig?.seed ?? puzzleData?.puzzleSeed;
+  const puzzleBody = {
+    ...celestialBody,
+    gridSize: puzzleData?.puzzleConfig?.gridSize ?? puzzleData?.gridSize ?? celestialBody.gridSize,
+    image: puzzleData?.imageUrl ?? celestialBody.image,
+    difficulty: puzzleData?.difficulty ?? celestialBody.difficulty,
+  };
+
+  useEffect(() => {
+    isLoadedRef.current = false;
+    groupsRef.current = [];
+    puzzleImageRef.current = null;
+    setProgress(0);
+    setTime(0);
+  }, [nasaIdFromState]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchPuzzleData = async () => {
+      setIsPuzzleLoading(true);
+      setPuzzleError(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+        const response = await fetch(
+          `https://spacepuzzle.onrender.com/celestial-objects/by-nasa/${nasaIdFromState}/puzzle`,
+          { headers, signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(`퍼즐 데이터를 불러오지 못했습니다. (${response.status})`);
+        }
+
+        const payload = await response.json();
+        if (isMounted) {
+          setPuzzleData(payload);
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        if (isMounted) {
+          setPuzzleError(error.message || '퍼즐 데이터를 불러오는 중 오류가 발생했습니다.');
+          setPuzzleData(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsPuzzleLoading(false);
+        }
+      }
+    };
+
+    fetchPuzzleData();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [nasaIdFromState]);
+
+  const shouldShowLoading = isPuzzleLoading;
+  const shouldShowError = Boolean(puzzleError);
+
   // 타이머
   useEffect(() => {
     if (!isPaused) {
@@ -47,16 +131,24 @@ const PuzzleGame = () => {
 
   // 퍼즐 초기화
   useEffect(() => {
+    if (isPuzzleLoading || puzzleError) return;
     if (!canvasRef.current || isLoadedRef.current) return;
+    if (!puzzleBody.image) {
+      setPuzzleError('이미지 정보를 찾을 수 없습니다.');
+      return;
+    }
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const gridSize = celestialBody.gridSize;
+    const gridSize = puzzleBody.gridSize;
+    const rng = Number.isFinite(Number(puzzleSeed))
+      ? createSeededRng(Number(puzzleSeed))
+      : Math.random;
 
     // 이미지 로드
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = celestialBody.image;
+    img.src = puzzleBody.image;
     
     img.onload = () => {
       // 이미지를 정사각형으로 크롭하고 리사이즈
@@ -83,21 +175,21 @@ const PuzzleGame = () => {
       isLoadedRef.current = true;
       
       // 퍼즐 조각 생성
-      initializePuzzle(gridSize);
+      initializePuzzle(gridSize, rng);
       
       // 첫 렌더링
       renderPuzzle();
     };
 
     img.onerror = () => {
-      console.error('이미지 로드 실패:', celestialBody.image);
+      console.error('이미지 로드 실패:', puzzleBody.image);
       alert('이미지를 불러올 수 없습니다. 다시 시도해주세요.');
       navigate('/gameplay');
     };
-  }, [celestialBody]);
+  }, [puzzleBody, isPuzzleLoading, puzzleError, puzzleSeed, navigate]);
 
   // 퍼즐 초기화 함수
-  const initializePuzzle = (gridSize) => {
+  const initializePuzzle = (gridSize, rng) => {
     const pieces = [];
     const groups = [];
 
@@ -105,10 +197,10 @@ const PuzzleGame = () => {
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
         const edges = {
-          top: row === 0 ? 0 : Math.random() > 0.5 ? 1 : -1,
-          right: col === gridSize - 1 ? 0 : Math.random() > 0.5 ? 1 : -1,
-          bottom: row === gridSize - 1 ? 0 : Math.random() > 0.5 ? 1 : -1,
-          left: col === 0 ? 0 : Math.random() > 0.5 ? 1 : -1,
+          top: row === 0 ? 0 : rng() > 0.5 ? 1 : -1,
+          right: col === gridSize - 1 ? 0 : rng() > 0.5 ? 1 : -1,
+          bottom: row === gridSize - 1 ? 0 : rng() > 0.5 ? 1 : -1,
+          left: col === 0 ? 0 : rng() > 0.5 ? 1 : -1,
         };
 
         // 인접한 조각과 요철이 맞물리도록 조정
@@ -138,8 +230,8 @@ const PuzzleGame = () => {
     const trayWidth = CANVAS_WIDTH - 100;
 
     pieces.forEach((piece, idx) => {
-      const randomX = trayX + Math.random() * (trayWidth - PIECE_SIZE);
-      const randomY = trayY + Math.random() * 80;
+      const randomX = trayX + rng() * (trayWidth - PIECE_SIZE);
+      const randomY = trayY + rng() * 80;
       
       const group = new Group(piece, { x: randomX, y: randomY });
       groups.push(group);
@@ -212,7 +304,7 @@ const PuzzleGame = () => {
     });
 
     // 진행률 계산
-    const totalPieces = celestialBody.gridSize * celestialBody.gridSize;
+    const totalPieces = puzzleBody.gridSize * puzzleBody.gridSize;
     const mergedPieces = groupsRef.current.filter(g => g.pieces.length > 0).length;
     const newProgress = Math.round(((totalPieces - mergedPieces + 1) / totalPieces) * 100);
     setProgress(newProgress);
@@ -315,6 +407,7 @@ const PuzzleGame = () => {
 
   // Canvas 이벤트 리스너 등록
   useEffect(() => {
+    if (shouldShowLoading || shouldShowError) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -327,7 +420,7 @@ const PuzzleGame = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isPaused]);
+  }, [isPaused, shouldShowLoading, shouldShowError]);
 
   // 렌더링 루프 (드래그 중 부드러운 업데이트)
   useEffect(() => {
@@ -341,6 +434,26 @@ const PuzzleGame = () => {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
+      {shouldShowLoading ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <p className="pixel-font text-xl text-gray-300">퍼즐 데이터를 불러오는 중...</p>
+        </div>
+      ) : shouldShowError ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <div className="text-center">
+            <p className="pixel-font text-xl text-red-400 mb-4">퍼즐을 불러오지 못했습니다</p>
+            <p className="text-sm text-gray-400 mb-6">{puzzleError}</p>
+            <button
+              type="button"
+              onClick={() => navigate('/gameplay')}
+              className="pixel-font text-lg bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg transition-all"
+            >
+              돌아가기
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* 우주 배경 - 진행률에 따라 밝아짐 */}
       <div 
         className="absolute inset-0 transition-all duration-1000"
@@ -387,10 +500,10 @@ const PuzzleGame = () => {
         {/* 왼쪽: 게임 정보 */}
         <div className="flex flex-col gap-2">
           <div className="bg-gray-900 bg-opacity-80 rounded-lg px-4 py-2 border border-blue-500">
-            <p className="pixel-font text-white text-lg">{celestialBody.name}</p>
+            <p className="pixel-font text-white text-lg">{puzzleBody.name}</p>
           </div>
           <div className="bg-gray-900 bg-opacity-80 rounded-lg px-4 py-2 border border-yellow-500">
-            <p className="pixel-font text-yellow-400">난이도: {celestialBody.difficulty}</p>
+            <p className="pixel-font text-yellow-400">난이도: {puzzleBody.difficulty}</p>
           </div>
         </div>
 
@@ -479,7 +592,7 @@ const PuzzleGame = () => {
         </div>
       )}
 
-      <style jsx>{`
+          <style>{`
         @keyframes fall {
           0% {
             transform: translateY(-100px) translateX(0) rotate(45deg);
@@ -497,6 +610,8 @@ const PuzzleGame = () => {
           }
         }
       `}</style>
+        </>
+      )}
     </div>
   );
 };
