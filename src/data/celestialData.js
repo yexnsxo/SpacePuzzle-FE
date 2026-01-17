@@ -1,0 +1,182 @@
+// 태양계 천체 데이터
+import earthImg from '../assets/celestial/earth.jpg';
+import mercuryImg from '../assets/celestial/mercury.jpg';
+import venusImg from '../assets/celestial/venus.jpg';
+import marsImg from '../assets/celestial/mars.jpg';
+
+export const solarSystemBodies = [
+  // 🟢 튜토리얼 & 클리어된 천체
+  {
+    id: 'earth',
+    name: '지구',
+    nameEn: 'Earth',
+    order: 1,
+    difficulty: 'easy',
+    difficultyKo: '쉬움',
+    gridSize: 3, // 3x3 퍼즐
+    locked: false,
+    cleared: true,
+    requiredStars: 0,
+    rewardStars: 1,
+    image: earthImg,
+    description: '우리가 살고 있는 아름다운 행성, 지구입니다.',
+  },
+  {
+    id: 'mercury',
+    name: '수성',
+    nameEn: 'Mercury',
+    order: 2,
+    difficulty: 'easy',
+    difficultyKo: '쉬움',
+    gridSize: 3,
+    locked: false,
+    cleared: true,
+    requiredStars: 0,
+    rewardStars: 1,
+    image: mercuryImg,
+    description: '태양에 가장 가까운 행성, 작고 빠른 수성입니다.',
+  },
+  {
+    id: 'venus',
+    name: '금성',
+    nameEn: 'Venus',
+    order: 3,
+    difficulty: 'easy',
+    difficultyKo: '쉬움',
+    gridSize: 3,
+    locked: false,
+    cleared: true,
+    requiredStars: 0,
+    rewardStars: 1,
+    image: venusImg,
+    description: '밝게 빛나는 새벽의 별, 금성입니다.',
+  },
+
+  // 🔒 잠긴 천체들
+  {
+    id: 'mars',
+    name: '화성',
+    nameEn: 'Mars',
+    order: 4,
+    difficulty: 'normal',
+    difficultyKo: '보통',
+    gridSize: 4, // 4x4 퍼즐
+    locked: true,
+    cleared: false,
+    requiredStars: 3, // 지구+수성+금성 클리어 필요
+    rewardStars: 2,
+    image: marsImg,
+    description: '붉은 행성, 인류의 꿈인 화성입니다.',
+  },
+  {
+    id: 'jupiter',
+    name: '목성',
+    nameEn: 'Jupiter',
+    order: 5,
+    difficulty: 'normal',
+    difficultyKo: '보통',
+    gridSize: 4,
+    locked: true,
+    cleared: false,
+    requiredStars: 5,
+    rewardStars: 2,
+    image: null, // 아직 이미지 없음
+    description: '태양계에서 가장 큰 행성, 목성입니다.',
+  },
+  {
+    id: 'saturn',
+    name: '토성',
+    nameEn: 'Saturn',
+    order: 6,
+    difficulty: 'hard',
+    difficultyKo: '어려움',
+    gridSize: 5, // 5x5 퍼즐
+    locked: true,
+    cleared: false,
+    requiredStars: 7,
+    rewardStars: 3,
+    image: null,
+    description: '아름다운 고리를 가진 토성입니다.',
+  },
+  {
+    id: 'uranus',
+    name: '천왕성',
+    nameEn: 'Uranus',
+    order: 7,
+    difficulty: 'hard',
+    difficultyKo: '어려움',
+    gridSize: 5,
+    locked: true,
+    cleared: false,
+    requiredStars: 10,
+    rewardStars: 3,
+    image: null,
+    description: '옆으로 누운 신비한 행성, 천왕성입니다.',
+  },
+  {
+    id: 'neptune',
+    name: '해왕성',
+    nameEn: 'Neptune',
+    order: 8,
+    difficulty: 'hard',
+    difficultyKo: '어려움',
+    gridSize: 5,
+    locked: true,
+    cleared: false,
+    requiredStars: 13,
+    rewardStars: 3,
+    image: null,
+    description: '푸른 얼음 행성, 해왕성입니다.',
+  },
+  {
+    id: 'pluto',
+    name: '명왕성',
+    nameEn: 'Pluto',
+    order: 9,
+    difficulty: 'very-hard',
+    difficultyKo: '매우 어려움',
+    gridSize: 5,
+    locked: true,
+    cleared: false,
+    requiredStars: 16,
+    rewardStars: 4,
+    image: null,
+    description: '작지만 특별한 왜행성, 명왕성입니다.',
+  },
+  {
+    id: 'sun',
+    name: '태양',
+    nameEn: 'Sun',
+    order: 10,
+    difficulty: 'extreme',
+    difficultyKo: '극한',
+    gridSize: 7, // 7x7 퍼즐 (최종 보스)
+    locked: true,
+    cleared: false,
+    requiredStars: 20, // 모든 행성 클리어 필요
+    rewardStars: 10,
+    image: null,
+    description: '태양계의 중심, 뜨거운 태양입니다.',
+  },
+];
+
+// 섹터 정보
+export const sectors = [
+  {
+    id: 'solar-system',
+    name: '태양계',
+    nameEn: 'Solar System',
+    description: '우리 태양계의 아름다운 행성들을 만나보세요.',
+    requiredStars: 0,
+    bodies: solarSystemBodies,
+  },
+  // 추후 추가될 섹터들
+  // {
+  //   id: 'galaxy',
+  //   name: '은하계',
+  //   nameEn: 'Galaxy',
+  //   description: '은하수의 신비로운 성운과 성단을 탐험하세요.',
+  //   requiredStars: 30,
+  //   bodies: galaxyBodies,
+  // },
+];
