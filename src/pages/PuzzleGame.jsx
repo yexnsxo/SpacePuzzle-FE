@@ -319,17 +319,17 @@ const PuzzleGame = () => {
     // 완성 체크
     if (mergedPieces === 1 && !completeRequestRef.current) {
       completeRequestRef.current = true;
-      completePuzzle().then(() => {
-        setTimeout(() => {
-          alert('🎉 퍼즐 완성! 축하합니다!');
-          navigate('/gameplay', {
-            state: {
-              sectorSlug: location.state?.sectorSlug,
-              refreshKey: Date.now(),
-            },
-          });
-        }, 500);
-      });
+      completePuzzle();
+      setTimeout(() => {
+        alert('🎉 퍼즐 완성! 축하합니다!');
+        navigate('/gameplay', {
+          state: {
+            sectorSlug: location.state?.sectorSlug,
+            refreshKey: Date.now(),
+          },
+        });
+      }, 50)
+      
     }
   };
 
