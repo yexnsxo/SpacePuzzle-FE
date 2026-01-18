@@ -38,6 +38,7 @@ const PuzzleGame = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const timeRef = useRef(0);
   
   // 퍼즐 게임 상태
   const groupsRef = useRef([]);
@@ -130,6 +131,10 @@ const PuzzleGame = () => {
       return () => clearInterval(interval);
     }
   }, [isPaused]);
+
+  useEffect(() => {
+    timeRef.current = time;
+  }, [time]);
 
   // 퍼즐 초기화
   useEffect(() => {
@@ -365,7 +370,7 @@ const PuzzleGame = () => {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ playTime: time }),
+          body: JSON.stringify({ playTime: timeRef.current }),
         }
       );
 
