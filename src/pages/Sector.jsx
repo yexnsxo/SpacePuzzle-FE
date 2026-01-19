@@ -5,8 +5,9 @@ import { supabase } from '../supabaseClient';
 const SECTOR_SLUGS = {
   'solar-system': 'solar-system',
   '태양계': 'solar-system',
-  'exo-systems': 'exo-systems',
-  '외계 행성계': 'exo-systems',
+  'exoplanet-systems': 'exoplanet-systems',
+  'exo-systems': 'exoplanet-systems', // 이전 버전 호환
+  '외계 행성계': 'exoplanet-systems',
   'nebulae': 'nebulae',
   '성운': 'nebulae',
   'galaxies': 'galaxies',

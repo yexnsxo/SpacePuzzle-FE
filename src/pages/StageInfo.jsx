@@ -1,25 +1,86 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const StageInfo = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const celestialBody = location.state?.celestialBody;
   
-  // 더미 데이터 (나중에 API나 props로 받을 예정)
-  const stageData = {
+  // 리더보드 상태
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+
+  useEffect(() => {
+    if (celestialBody?.id) {
+      fetchLeaderboard();
+    }
+  }, [celestialBody?.id]);
+
+  const fetchLeaderboard = async () => {
+    setIsLoadingLeaderboard(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      
+      console.log('🔐 로그인 상태:', accessToken ? '로그인됨' : '로그인 안됨');
+      
+      if (!accessToken) {
+        setLeaderboard(null);
+        return;
+      }
+
+      console.log(`📡 ${celestialBody?.name || '천체'} 리더보드 요청 시작...`);
+      
+      // 🔧 백엔드는 nasaId를 사용 (문자열 식별자: "earth", "mars", "proxima-b" 등)
+      const celestialIdentifier = celestialBody.nasaId || celestialBody.id;
+      
+      if (!celestialIdentifier) {
+        console.warn(`⚠️ ${celestialBody?.name}: 천체 식별자가 없어서 리더보드를 불러올 수 없습니다.`);
+        setLeaderboard(null);
+        return;
+      }
+      
+      console.log(`   🆔 사용할 식별자: ${celestialIdentifier}`);
+      
+      const response = await fetch(
+        `https://spacepuzzle.onrender.com/celestial-objects/${encodeURIComponent(celestialIdentifier)}/leaderboard`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      console.log(`📥 리더보드 응답:`, response.status, response.statusText);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ 리더보드 데이터:`, data);
+        setLeaderboard(data);
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ 리더보드 API 에러:`, response.status, errorText);
+        setLeaderboard(null);
+      }
+    } catch (err) {
+      console.error('❌ 리더보드 가져오기 실패:', err);
+      setLeaderboard(null);
+    } finally {
+      setIsLoadingLeaderboard(false);
+    }
+  };
+
+  // celestialBody가 없으면 기본값 사용
+  const stageData = celestialBody || {
     name: '지구',
     nameEn: 'Earth',
     description: '태양계에서 세 번째 행성으로, 생명체가 살고 있는 유일한 알려진 천체입니다. 푸른 대양과 대륙, 구름이 아름다운 조화를 이루고 있습니다.',
     difficulty: 2,
     sector: '태양계',
+    image: null,
   };
-
-  // 더미 랭킹 데이터
-  const rankings = [
-    { rank: 1, nickname: '우주탐험가', time: '00:45', stars: 3 },
-    { rank: 2, nickname: 'SpaceMaster', time: '00:52', stars: 3 },
-    { rank: 3, nickname: '퍼즐왕', time: '01:03', stars: 3 },
-    { rank: 4, nickname: 'Galaxy_Pro', time: '01:15', stars: 2 },
-    { rank: 5, nickname: '별빛여행자', time: '01:28', stars: 2 },
-  ];
 
   const getDifficultyText = (level) => {
     const difficulties = ['매우 쉬움', '쉬움', '보통', '어려움', '매우 어려움'];
@@ -65,14 +126,30 @@ const StageInfo = () => {
           
           {/* 왼쪽: 천체 이미지 */}
           <div className="bg-gray-900 bg-opacity-90 rounded-2xl p-8 border-2 border-purple-500 flex flex-col items-center justify-center">
-            {/* 더미 천체 이미지 (흑백, 누끼) */}
-            <div 
-              className="w-64 h-64 rounded-full bg-gradient-to-br from-gray-300 to-gray-600 mb-6"
-              style={{
-                filter: 'grayscale(100%) contrast(1.2)',
-                boxShadow: '0 0 60px rgba(150, 150, 150, 0.6), inset -30px -30px 60px rgba(0,0,0,0.5)',
-              }}
-            />
+            {/* 천체 이미지 */}
+            {stageData.image ? (
+              <img
+                src={`https://spacepuzzle.onrender.com/api/proxy-image?url=${encodeURIComponent(stageData.image)}`}
+                alt={stageData.name}
+                className="w-64 h-64 rounded-full mb-6 object-cover"
+                style={{
+                  filter: 'grayscale(100%) contrast(1.2)',
+                  boxShadow: '0 0 60px rgba(150, 150, 150, 0.6)',
+                }}
+                onError={(e) => {
+                  // 프록시 실패 시 원본 이미지로 폴백
+                  e.target.src = stageData.image;
+                }}
+              />
+            ) : (
+              <div 
+                className="w-64 h-64 rounded-full bg-gradient-to-br from-gray-300 to-gray-600 mb-6"
+                style={{
+                  filter: 'grayscale(100%) contrast(1.2)',
+                  boxShadow: '0 0 60px rgba(150, 150, 150, 0.6), inset -30px -30px 60px rgba(0,0,0,0.5)',
+                }}
+              />
+            )}
             
             <h1 className="pixel-font text-5xl text-white mb-2">{stageData.name}</h1>
             <p className="text-gray-400 text-xl mb-4">{stageData.nameEn}</p>
@@ -94,48 +171,92 @@ const StageInfo = () => {
             
             {/* 천체 설명 */}
             <div className="bg-gray-900 bg-opacity-90 rounded-2xl p-6 border-2 border-blue-500">
-              <h3 className="pixel-font text-2xl text-white mb-3 flex items-center gap-2">
-                <span>📖</span>
-                <span>천체 정보</span>
-              </h3>
-              <p className="text-gray-300 leading-relaxed">{stageData.description}</p>
+            <h3 className="pixel-font text-2xl text-white mb-3 flex items-center gap-2">
+              <span>📖</span>
+              <span>천체 정보</span>
+            </h3>
+            <p className="text-gray-300 leading-relaxed">
+              {stageData.description || '천체에 대한 설명이 없습니다.'}
+            </p>
             </div>
 
-            {/* 전세계 랭킹 */}
+            {/* 전세계 랭킹 (리더보드) */}
             <div className="bg-gray-900 bg-opacity-90 rounded-2xl p-6 border-2 border-yellow-500 flex-1">
               <h3 className="pixel-font text-2xl text-white mb-4 flex items-center gap-2">
                 <span>🏆</span>
-                <span>전세계 랭킹</span>
+                <span>리더보드</span>
               </h3>
               
-              <div className="space-y-2">
-                {rankings.map((user) => (
-                  <div 
-                    key={user.rank}
-                    className="flex items-center justify-between bg-gray-800 bg-opacity-50 rounded-lg px-4 py-2 hover:bg-opacity-70 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`pixel-font text-xl ${
-                        user.rank === 1 ? 'text-yellow-400' : 
-                        user.rank === 2 ? 'text-gray-300' : 
-                        user.rank === 3 ? 'text-orange-400' : 'text-gray-400'
-                      }`}>
-                        #{user.rank}
-                      </span>
-                      <span className="text-white">{user.nickname}</span>
+              {isLoadingLeaderboard ? (
+                <div className="text-center text-gray-400 pixel-font py-8">로딩 중...</div>
+              ) : leaderboard ? (
+                <>
+                  {/* TOP 5 */}
+                  {leaderboard.topPlayers && leaderboard.topPlayers.length > 0 ? (
+                    <div className="space-y-2 mb-4">
+                      {leaderboard.topPlayers.map((player, index) => (
+                        <div
+                          key={player.userId}
+                          className={`flex items-center justify-between p-3 rounded ${
+                            index === 0 ? 'bg-yellow-900 bg-opacity-40' :
+                            index === 1 ? 'bg-gray-700 bg-opacity-40' :
+                            index === 2 ? 'bg-orange-900 bg-opacity-40' :
+                            'bg-gray-700 bg-opacity-30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}위`}
+                            </span>
+                            <span className="text-white font-bold">{player.nickname}</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-blue-400">⏱️ {Math.floor(player.playTime / 60)}분 {player.playTime % 60}초</p>
+                            <p className="text-yellow-400 text-sm">⭐ {player.starsEarned}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-blue-400 font-mono">{user.time}</span>
-                      <span className="text-yellow-400">{'⭐'.repeat(user.stars)}</span>
+                  ) : (
+                    <p className="text-center text-gray-400 mb-4 py-8">아직 기록이 없습니다</p>
+                  )}
+
+                  {/* 내 기록 */}
+                  {leaderboard.myRank ? (
+                    <div className="border-t border-gray-700 pt-4">
+                      <h4 className="text-blue-400 pixel-font mb-3 text-center">📍 내 기록</h4>
+                      <div className="bg-blue-900 bg-opacity-40 rounded p-4 text-center">
+                        <p className="text-white font-bold text-lg">
+                          {leaderboard.myRank.rank}위 | 
+                          ⏱️ {Math.floor(leaderboard.myRank.playTime / 60)}분 {leaderboard.myRank.playTime % 60}초 | 
+                          ⭐ {leaderboard.myRank.starsEarned}
+                        </p>
+                        {leaderboard.myRank.rank > 5 && (
+                          <p className="text-gray-400 text-sm mt-2">
+                            💡 더 빠르게 풀어서 상위권에 도전하세요!
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ) : (
+                    <div className="border-t border-gray-700 pt-4">
+                      <p className="text-center text-gray-400">
+                        아직 플레이 기록이 없습니다<br/>
+                        첫 플레이어가 되어보세요! 🚀
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  🔒 로그인하고 전 세계 유저와 경쟁하세요!
+                </div>
+              )}
             </div>
 
             {/* 플레이 버튼 */}
             <button
-              onClick={() => alert('게임 플레이 화면으로 이동 (추후 구현)')}
+              onClick={() => navigate('/puzzle', { state: { celestialBody: stageData } })}
               className="pixel-font text-3xl bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white py-4 rounded-xl transition-all transform hover:scale-105 border-2 border-green-400 shadow-lg"
               style={{
                 boxShadow: '0 0 40px rgba(34, 197, 94, 0.5)',

@@ -5,8 +5,9 @@ import { supabase } from '../supabaseClient';
 const SECTOR_SLUGS = {
   'solar-system': 'solar-system',
   '태양계': 'solar-system',
-  'exo-systems': 'exo-systems',
-  '외계 행성계': 'exo-systems',
+  'exoplanet-systems': 'exoplanet-systems',
+  'exo-systems': 'exoplanet-systems', // 이전 버전 호환
+  '외계 행성계': 'exoplanet-systems',
   'nebulae': 'nebulae',
   '성운': 'nebulae',
   'galaxies': 'galaxies',
@@ -23,6 +24,183 @@ const DIFFICULTY_LABELS = {
   5: '극한',
 };
 
+// 🔧 더미 천체 데이터 (백엔드에 데이터가 없을 때 사용)
+const DUMMY_CELESTIAL_DATA = {
+  'exoplanet-systems': [
+    {
+      id: 'kepler-186f',
+      nasaId: 'kepler-186f',
+      title: '케플러-186f',
+      nameEn: 'Kepler-186f',
+      description: '지구와 크기가 비슷한 외계행성',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/09/Kepler-186f_artistconcept2-1.jpg',
+      difficulty: '2',
+      gridSize: 4,
+      rewardStars: 2,
+      puzzleType: 'jigsaw',
+      displayOrder: 1,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'proxima-b',
+      nasaId: 'proxima-b',
+      title: '프록시마 b',
+      nameEn: 'Proxima Centauri b',
+      description: '가장 가까운 외계행성',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/09/eso1629a.jpg',
+      difficulty: '3',
+      gridSize: 5,
+      rewardStars: 3,
+      puzzleType: 'jigsaw',
+      displayOrder: 2,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'trappist-1e',
+      nasaId: 'trappist-1e',
+      title: '트라피스트-1e',
+      nameEn: 'TRAPPIST-1e',
+      description: '생명체 존재 가능성이 높은 행성',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/09/pia21422.jpg',
+      difficulty: '3',
+      gridSize: 5,
+      rewardStars: 3,
+      puzzleType: 'jigsaw',
+      displayOrder: 3,
+      locked: false,
+      isCleared: false,
+    },
+  ],
+  'nebulae': [
+    {
+      id: 'orion-nebula',
+      nasaId: 'orion-nebula',
+      title: '오리온 성운',
+      nameEn: 'Orion Nebula',
+      description: '별이 탄생하는 거대한 성운',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/04/orion-nebula-mosaic-5856x3888-1.jpg',
+      difficulty: '3',
+      gridSize: 5,
+      rewardStars: 3,
+      puzzleType: 'jigsaw',
+      displayOrder: 1,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'crab-nebula',
+      nasaId: 'crab-nebula',
+      title: '게 성운',
+      nameEn: 'Crab Nebula',
+      description: '초신성 폭발의 잔해',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/05/crab-nebula-5376x4848-1.jpg',
+      difficulty: '4',
+      gridSize: 6,
+      rewardStars: 4,
+      puzzleType: 'jigsaw',
+      displayOrder: 2,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'eagle-nebula',
+      nasaId: 'eagle-nebula',
+      title: '독수리 성운',
+      nameEn: 'Eagle Nebula',
+      description: '창조의 기둥으로 유명한 성운',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/05/pillars-of-creation-4800x6000-1.jpg',
+      difficulty: '4',
+      gridSize: 6,
+      rewardStars: 4,
+      puzzleType: 'jigsaw',
+      displayOrder: 3,
+      locked: false,
+      isCleared: false,
+    },
+  ],
+  'galaxies': [
+    {
+      id: 'andromeda',
+      nasaId: 'andromeda',
+      title: '안드로메다 은하',
+      nameEn: 'Andromeda Galaxy',
+      description: '우리 은하와 가장 가까운 대형 은하',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/04/andromeda-m31-nasa-swift.jpg',
+      difficulty: '4',
+      gridSize: 6,
+      rewardStars: 4,
+      puzzleType: 'jigsaw',
+      displayOrder: 1,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'whirlpool',
+      nasaId: 'whirlpool',
+      title: '소용돌이 은하',
+      nameEn: 'Whirlpool Galaxy',
+      description: '아름다운 나선 구조의 은하',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/04/whirlpool-galaxy-5408x6144-1.jpg',
+      difficulty: '5',
+      gridSize: 7,
+      rewardStars: 5,
+      puzzleType: 'jigsaw',
+      displayOrder: 2,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'sombrero',
+      nasaId: 'sombrero',
+      title: '솜브레로 은하',
+      nameEn: 'Sombrero Galaxy',
+      description: '모자 모양의 독특한 은하',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/04/sombrero-galaxy-4800x2400-1.jpg',
+      difficulty: '5',
+      gridSize: 7,
+      rewardStars: 5,
+      puzzleType: 'jigsaw',
+      displayOrder: 3,
+      locked: false,
+      isCleared: false,
+    },
+  ],
+  'deep-space-extremes': [
+    {
+      id: 'black-hole',
+      nasaId: 'black-hole-m87',
+      title: 'M87 블랙홀',
+      nameEn: 'M87 Black Hole',
+      description: '인류가 촬영한 최초의 블랙홀',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/05/black-hole-m87-4096x2304-1.jpg',
+      difficulty: '5',
+      gridSize: 8,
+      rewardStars: 5,
+      puzzleType: 'jigsaw',
+      displayOrder: 1,
+      locked: false,
+      isCleared: false,
+    },
+    {
+      id: 'pillars-of-creation',
+      nasaId: 'pillars-jwst',
+      title: '창조의 기둥 (JWST)',
+      nameEn: 'Pillars of Creation',
+      description: '제임스 웹 망원경이 촬영한 창조의 기둥',
+      imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/05/pillars-of-creation-4800x6000-1.jpg',
+      difficulty: '5',
+      gridSize: 8,
+      rewardStars: 5,
+      puzzleType: 'jigsaw',
+      displayOrder: 2,
+      locked: false,
+      isCleared: false,
+    },
+  ],
+};
+
 const resolveSectorSlug = (value) => {
   if (!value || typeof value !== 'string') {
     return 'solar-system';
@@ -37,6 +215,10 @@ const GamePlay = () => {
   const [celestialBodies, setCelestialBodies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  
+  // 천체별 리더보드 상태
+  const [celestialLeaderboard, setCelestialLeaderboard] = useState(null);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
   const sectorSlug = resolveSectorSlug(location.state?.sectorSlug || location.state?.sector);
   const refreshKey = location.state?.refreshKey;
@@ -49,41 +231,86 @@ const GamePlay = () => {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const accessToken = session?.access_token;
-        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-        const response = await fetch(
-          `https://spacepuzzle.onrender.com/sectors/${sectorSlug}/celestial-objects`,
-          { headers, signal: controller.signal }
-        );
-
-        if (!response.ok) {
-          throw new Error(`천체 데이터를 불러오지 못했습니다. (${response.status})`);
+        // 게스트 모드 체크
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isGuest = user.isGuest === true;
+        
+        // 🔧 게스트 모드일 때 클리어 기록 가져오기
+        let guestClearedIds = [];
+        if (isGuest) {
+          const guestCleared = JSON.parse(localStorage.getItem('guestClearedCelestials') || '[]');
+          guestClearedIds = guestCleared.map(c => c.id);
+          console.log('게스트 클리어 기록:', guestClearedIds);
         }
+        
+        let normalizedBodies = [];
+        
+        // 🔧 백엔드에서 데이터 가져오기 시도
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+          const response = await fetch(
+            `https://spacepuzzle.onrender.com/sectors/${sectorSlug}/celestial-objects`,
+            { headers, signal: controller.signal }
+          );
 
-        const payload = await response.json();
-        const normalizedBodies = (payload?.celestialObjects || [])
-          .map((body) => {
+          if (response.ok) {
+            const payload = await response.json();
+            normalizedBodies = (payload?.celestialObjects || [])
+              .map((body) => {
+                const difficultyValue = Number(body.difficulty);
+                
+                // 🔧 게스트 모드일 때는 localStorage 기록 확인
+                const isCleared = isGuest 
+                  ? guestClearedIds.includes(body.id)
+                  : Boolean(body.isCleared);
+                
+                return {
+                  id: body.id,
+                  nasaId: body.nasaId,
+                  name: body.title || body.name || '',
+                  nameEn: body.nameEn || '',
+                  description: body.description || '',
+                  image: body.imageUrl || body.image || null,
+                  locked: Boolean(body.locked),
+                  requiredStars: body.requiredStars ?? payload?.sector?.requiredStars ?? 0,
+                  difficulty: difficultyValue,
+                  difficultyKo: DIFFICULTY_LABELS[difficultyValue] || '보통',
+                  gridSize: body.gridSize || 3,
+                  rewardStars: body.rewardStars || 0,
+                  puzzleType: body.puzzleType,
+                  displayOrder: body.displayOrder ?? 0,
+                  isCleared: isCleared,
+                };
+              })
+              .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+          }
+        } catch (backendError) {
+          console.warn('백엔드 데이터 가져오기 실패, 더미 데이터 사용:', backendError);
+        }
+        
+        // 🔧 백엔드 데이터가 없으면 더미 데이터 사용
+        if (normalizedBodies.length === 0 && DUMMY_CELESTIAL_DATA[sectorSlug]) {
+          console.log(`📦 ${sectorSlug} 섹터의 더미 데이터 사용`);
+          normalizedBodies = DUMMY_CELESTIAL_DATA[sectorSlug].map((body) => {
             const difficultyValue = Number(body.difficulty);
+            
+            // 🔧 게스트 모드일 때는 localStorage 기록 확인
+            const isCleared = isGuest 
+              ? guestClearedIds.includes(body.id)
+              : Boolean(body.isCleared);
+            
             return {
-              id: body.id,
-              nasaId: body.nasaId,
-              name: body.title || body.name || '',
-              nameEn: body.nameEn || '',
-              description: body.description || '',
-              image: body.imageUrl || body.image || null,
-              locked: Boolean(body.locked),
-              requiredStars: body.requiredStars ?? payload?.sector?.requiredStars ?? 0,
+              ...body,
+              name: body.title,
+              image: body.imageUrl,
               difficulty: difficultyValue,
               difficultyKo: DIFFICULTY_LABELS[difficultyValue] || '보통',
-              gridSize: body.gridSize || 3,
-              rewardStars: body.rewardStars || 0,
-              puzzleType: body.puzzleType,
-              displayOrder: body.displayOrder ?? 0,
-              isCleared: Boolean(body.isCleared),
+              isCleared: isCleared,
             };
-          })
-          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+          });
+        }
 
         if (isMounted) {
           setCelestialBodies(normalizedBodies);
@@ -110,9 +337,68 @@ const GamePlay = () => {
     };
   }, [sectorSlug, refreshKey]);
 
-  const handleBodyClick = (body) => {
+  const handleBodyClick = async (body) => {
     if (!body.locked) {
       setSelectedBody(body);
+      
+      // 천체별 리더보드 가져오기
+      setIsLoadingLeaderboard(true);
+      setCelestialLeaderboard(null);
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        console.log('🔐 로그인 상태:', accessToken ? '로그인됨' : '로그인 안됨');
+        
+        if (accessToken) {
+          console.log(`📡 ${body.name} 리더보드 요청 시작...`);
+          console.log(`   천체 ID: ${body.id}`);
+          console.log(`   천체 NASA ID: ${body.nasaId}`);
+          console.log(`   천체 데이터:`, body);
+          
+          // 🔧 백엔드는 nasaId를 사용 (문자열 식별자: "earth", "mars", "proxima-b" 등)
+          const celestialIdentifier = body.nasaId || body.id;
+          
+          if (!celestialIdentifier) {
+            console.warn(`⚠️ ${body.name}: 천체 식별자가 없어서 리더보드를 불러올 수 없습니다.`);
+            setCelestialLeaderboard(null);
+            setIsLoadingLeaderboard(false);
+            return;
+          }
+          
+          console.log(`   🆔 사용할 식별자: ${celestialIdentifier}`);
+          
+          const response = await fetch(
+            `https://spacepuzzle.onrender.com/celestial-objects/${encodeURIComponent(celestialIdentifier)}/leaderboard`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          console.log(`📥 ${body.name} 리더보드 응답:`, response.status, response.statusText);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ ${body.name} 리더보드 데이터:`, data);
+            setCelestialLeaderboard(data);
+          } else {
+            const errorText = await response.text();
+            console.error(`❌ ${body.name} 리더보드 API 에러:`, response.status, errorText);
+            setCelestialLeaderboard(null);
+          }
+        } else {
+          // 로그인하지 않은 경우
+          setCelestialLeaderboard(null);
+        }
+      } catch (error) {
+        console.error('❌ 리더보드 가져오기 실패:', error);
+        setCelestialLeaderboard(null);
+      } finally {
+        setIsLoadingLeaderboard(false);
+      }
     }
   };
 
@@ -178,13 +464,17 @@ const GamePlay = () => {
                     {/* 천체 이미지 또는 플레이스홀더 */}
                   {body.image ? (
                       <img
-                        src={body.image}
+                        src={`https://spacepuzzle.onrender.com/api/proxy-image?url=${encodeURIComponent(body.image)}`}
                         alt={body.name}
                       className={`w-28 h-28 mx-auto rounded-full mb-4 object-cover ${
                         body.locked || !body.isCleared ? 'filter grayscale' : ''
                       }`}
                         style={{
                           boxShadow: body.locked ? 'none' : '0 0 30px rgba(150, 150, 150, 0.5)',
+                        }}
+                        onError={(e) => {
+                          // 프록시 실패 시 원본 이미지로 폴백
+                          e.target.src = body.image;
                         }}
                       />
                     ) : (
@@ -225,22 +515,26 @@ const GamePlay = () => {
           </div>
         </div>
 
-        <div className="w-1/3 bg-gray-900 bg-opacity-90 p-8 border-l-2 border-blue-500 flex items-center">
+        <div className="w-1/3 bg-gray-900 bg-opacity-90 border-l-2 border-blue-500 overflow-y-auto">
           {selectedBody ? (
-            <div className="w-full">
-              <h3 className="pixel-font text-3xl text-white mb-6 text-center">스테이지 정보</h3>
+            <div className="w-full p-8">
+              <h3 className="pixel-font text-3xl text-white mb-6 text-center sticky top-0 bg-gray-900 bg-opacity-95 py-4 -mx-8 px-8 z-10">스테이지 정보</h3>
               
               <div className="bg-gray-800 rounded-lg p-6 mb-6">
                 {/* 천체 이미지 */}
                 {selectedBody.image ? (
                   <img
-                    src={selectedBody.image}
+                    src={`https://spacepuzzle.onrender.com/api/proxy-image?url=${encodeURIComponent(selectedBody.image)}`}
                     alt={selectedBody.name}
                     className={`w-40 h-40 mx-auto rounded-full mb-4 object-cover ${
                       selectedBody.locked || !selectedBody.isCleared ? 'filter grayscale' : ''
                     }`}
                     style={{
                       boxShadow: '0 0 40px rgba(150, 150, 150, 0.6)',
+                    }}
+                    onError={(e) => {
+                      // 프록시 실패 시 원본 이미지로 폴백
+                      e.target.src = selectedBody.image;
                     }}
                   />
                 ) : (
@@ -285,6 +579,77 @@ const GamePlay = () => {
                 </p>
               </div>
 
+              {/* 천체별 리더보드 */}
+              <div className="bg-gray-800 rounded-lg p-6 mb-6">
+                <h4 className="text-yellow-400 text-xl pixel-font mb-4 text-center">🏆 리더보드</h4>
+                
+                {isLoadingLeaderboard ? (
+                  <div className="text-center text-gray-400 pixel-font">로딩 중...</div>
+                ) : celestialLeaderboard ? (
+                  <>
+                    {/* TOP 5 */}
+                    {celestialLeaderboard.topPlayers && celestialLeaderboard.topPlayers.length > 0 ? (
+                      <div className="space-y-2 mb-4">
+                        {celestialLeaderboard.topPlayers.map((player, index) => (
+                          <div
+                            key={player.userId}
+                            className={`flex items-center justify-between p-2 rounded ${
+                              index === 0 ? 'bg-yellow-900 bg-opacity-30' :
+                              index === 1 ? 'bg-gray-700 bg-opacity-30' :
+                              index === 2 ? 'bg-orange-900 bg-opacity-30' :
+                              'bg-gray-700 bg-opacity-20'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}위`}
+                              </span>
+                              <span className="text-white text-sm">{player.nickname}</span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-blue-400 text-xs">⏱️ {Math.floor(player.playTime / 60)}분 {player.playTime % 60}초</p>
+                              <p className="text-yellow-400 text-xs">⭐ {player.starsEarned}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-400 text-sm mb-4">아직 기록이 없습니다</p>
+                    )}
+
+                    {/* 내 기록 */}
+                    {celestialLeaderboard.myRank ? (
+                      <div className="border-t border-gray-700 pt-4">
+                        <h5 className="text-blue-400 text-sm pixel-font mb-2 text-center">📍 내 기록</h5>
+                        <div className="bg-blue-900 bg-opacity-30 rounded p-3 text-center">
+                          <p className="text-white font-bold">
+                            {celestialLeaderboard.myRank.rank}위 | 
+                            ⏱️ {Math.floor(celestialLeaderboard.myRank.playTime / 60)}분 {celestialLeaderboard.myRank.playTime % 60}초 | 
+                            ⭐ {celestialLeaderboard.myRank.starsEarned}
+                          </p>
+                          {celestialLeaderboard.myRank.rank > 5 && (
+                            <p className="text-gray-400 text-xs mt-1">
+                              💡 더 빠르게 풀어서 상위권에 도전하세요!
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border-t border-gray-700 pt-4">
+                        <p className="text-center text-gray-400 text-sm">
+                          아직 플레이 기록이 없습니다<br/>
+                          첫 플레이어가 되어보세요! 🚀
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center text-gray-400 text-sm">
+                    🔒 로그인하고 전 세계 유저와 경쟁하세요!
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleStartPuzzle}
                 className="w-full pixel-font text-xl bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white py-4 rounded-lg transition-all transform hover:scale-105 border-2 border-green-400"
@@ -296,9 +661,29 @@ const GamePlay = () => {
               </button>
             </div>
           ) : (
-            <div className="text-center w-full">
-              <p className="text-gray-400 text-lg">천체를 선택하세요</p>
-              <p className="text-gray-500 text-sm mt-2">좌측에서 천체를 클릭하면<br/>상세 정보가 표시됩니다</p>
+            /* 천체 선택 안내 */
+            <div className="w-full flex flex-col items-center justify-center h-full">
+              <div className="text-center">
+                <div className="text-8xl mb-6">🌍</div>
+                <h3 className="pixel-font text-2xl text-white mb-4">천체를 선택하세요</h3>
+                <p className="text-gray-400 text-sm mb-2">좌측에서 천체를 클릭하면</p>
+                <p className="text-gray-400 text-sm mb-6">상세 정보와 리더보드가 표시됩니다</p>
+                
+                <div className="bg-gray-800 bg-opacity-50 rounded-lg p-6 max-w-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">📊</span>
+                    <span className="text-white text-sm">천체별 랭킹 확인</span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">⏱️</span>
+                    <span className="text-white text-sm">최고 기록 도전</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🏆</span>
+                    <span className="text-white text-sm">전 세계 유저와 경쟁</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

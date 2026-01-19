@@ -44,6 +44,24 @@ const LoginPage = () => {
   };
 
   const handleGuestPlay = () => {
+    console.log('🎮 게스트 플레이 시작 - localStorage 전체 초기화');
+    
+    // 🧹 게스트 관련 모든 localStorage 항목 삭제 (완전 초기화)
+    const keysToRemove = [
+      'guestStats',
+      'guestUnlockedSectors',
+      'guestPurchasedItems',
+      'guestCustomization',
+      'guestMilestones',
+      'guestClearedCelestials',  // 클리어한 천체 목록 삭제
+      'guestCompletions',         // 퍼즐 완료 기록 삭제
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`🗑️ 삭제: ${key}`);
+    });
+    
     // 게스트 유저 정보 저장
     const guestUser = {
       email: 'guest@spacepuzzle.com',
@@ -51,9 +69,42 @@ const LoginPage = () => {
       isGuest: true,
     };
     localStorage.setItem('user', JSON.stringify(guestUser));
+    console.log('✅ 게스트 유저 정보 저장:', guestUser);
     
-    // 로비로 이동
-    navigate('/lobby');
+    // 게스트 초기 자원 설정 (새로운 경제 시스템)
+    const guestStats = {
+      stars: 0,          // 별: 누적 포인트 (소모 안됨)
+      credits: 20,       // 크레딧: 초기 20개
+      spaceParts: 0,     // 우주 부품: 초기 0개
+    };
+    localStorage.setItem('guestStats', JSON.stringify(guestStats));
+    console.log('✅ 게스트 초기 자원:', guestStats);
+    
+    // 게스트 해금 섹터 초기화 (섹터 1만 해금)
+    localStorage.setItem('guestUnlockedSectors', JSON.stringify([1]));
+    
+    // 게스트 구매 아이템 초기화
+    localStorage.setItem('guestPurchasedItems', JSON.stringify([]));
+    
+    // 게스트 클리어한 천체 초기화 (빈 배열)
+    localStorage.setItem('guestClearedCelestials', JSON.stringify([]));
+    console.log('✅ 게스트 클리어 천체 초기화: []');
+    
+    // 게스트 커스터마이제이션 초기화
+    const guestCustomization = {
+      background: 'default',
+      cockpit: 'default',
+      items: [], // { itemId, x, y }
+    };
+    localStorage.setItem('guestCustomization', JSON.stringify(guestCustomization));
+    
+    // 게스트 마일스톤 달성 초기화
+    localStorage.setItem('guestMilestones', JSON.stringify([]));
+    
+    console.log('✅ 게스트 플레이 초기화 완료 - 튜토리얼로 이동');
+    
+    // 튜토리얼로 이동 (로비 아님!)
+    navigate('/tutorial');
   };
 
   return (

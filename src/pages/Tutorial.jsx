@@ -28,16 +28,34 @@ const Tutorial = () => {
   useEffect(() => {
     setFadeIn(true);
     
+    // 🔧 게스트 자원 확인 (이미 Login.jsx에서 초기화됨, 여기서는 확인만)
+    const guestStats = JSON.parse(localStorage.getItem('guestStats') || '{"stars": 0, "credits": 20, "spaceParts": 0}');
+    console.log('📚 튜토리얼 시작 - 현재 자원:', guestStats);
+    
     // 각 씬 자동 넘김 (5초마다)
     const sceneTimer = setInterval(() => {
       setCurrentScene(prev => {
         if (prev < cutscenes.length - 1) {
           return prev + 1;
         } else {
-          // 마지막 씬 후 퍼즐 게임으로
+          // 마지막 씬 후 지구 퍼즐 게임으로
           clearInterval(sceneTimer);
           setTimeout(() => {
-            navigate('/puzzle');
+            console.log('📚 튜토리얼 완료 - 지구 퍼즐로 이동');
+            navigate('/puzzle', {
+              state: {
+                celestialBody: {
+                  id: 'earth',
+                  name: '지구',
+                  nameEn: 'Earth',
+                  difficulty: '쉬움',
+                  gridSize: 3,
+                  rewardStars: 3,
+                  image: null,
+                },
+                sectorSlug: 'solar-system',
+              }
+            });
           }, 3000);
           return prev;
         }
@@ -48,7 +66,20 @@ const Tutorial = () => {
   }, [navigate]);
 
   const handleSkip = () => {
-    navigate('/puzzle');
+    navigate('/puzzle', {
+      state: {
+        celestialBody: {
+          id: 'earth',
+          name: '지구',
+          nameEn: 'Earth',
+          difficulty: '쉬움',
+          gridSize: 3,
+          rewardStars: 3,
+          image: null,
+        },
+        sectorSlug: 'solar-system',
+      }
+    });
   };
 
   return (

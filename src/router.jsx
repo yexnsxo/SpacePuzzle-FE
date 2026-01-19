@@ -8,6 +8,8 @@ import Cockpit from './pages/Cockpit';
 import Sector from './pages/Sector';
 import GamePlay from './pages/GamePlay';
 import PuzzleGame from './pages/PuzzleGame';
+import ApodInfo from './pages/ApodInfo';
+import Shop from './pages/Shop';
 
 const router = createBrowserRouter([
   {
@@ -41,6 +43,14 @@ const router = createBrowserRouter([
   {
     path: '/puzzle',
     element: <PuzzleGame />,
+  },
+  {
+    path: '/apod-info',
+    element: <ApodInfo />,
+  },
+  {
+    path: '/shop',
+    element: <Shop />,
   },
 ]);
 
