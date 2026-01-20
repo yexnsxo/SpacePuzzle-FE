@@ -5,6 +5,7 @@ import { Group } from '../game/puzzle/Group';
 import { PuzzleEngine } from '../game/puzzle/PuzzleEngine';
 import { drawPuzzleShape } from '../game/puzzle/utils';
 import { supabase } from '../supabaseClient';
+import Phaser from 'phaser';
 
 const createSeededRng = (seed) => {
   let value = seed >>> 0;
@@ -47,6 +48,10 @@ const PuzzleGame = () => {
   const puzzleImageRef = useRef(null);
   const isLoadedRef = useRef(false);
   const completeRequestRef = useRef(false);
+  
+  // 물리 효과를 위한 속성
+  const groupPhysicsRef = useRef(new Map()); // groupId -> {vx, vy}
+  const dragStartPosRef = useRef({ x: 0, y: 0, time: 0 }); // 드래그 시작 위치
 
   const nasaIdFromState = location.state?.nasaId
     || celestialBody.nasaId
@@ -67,20 +72,23 @@ const PuzzleGame = () => {
   console.log('🔍 Grid Size:', puzzleBody.gridSize);
   console.log('🔍 Puzzle Data:', puzzleData);
   
-  // 퍼즐 판 설정 (puzzleBody 정의 후에 계산)
+  // 화면 전체 크기를 캔버스로 사용
+  const CANVAS_WIDTH = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const CANVAS_HEIGHT = typeof window !== 'undefined' ? window.innerHeight : 1080;
+  
+  // 퍼즐 판 설정 (화면 중앙 상단에 배치)
   const BOARD_SIZE = 500; // 고정된 퍼즐 판 크기
-  const CANVAS_WIDTH = 800;
-  const BOARD_OFFSET_X = (CANVAS_WIDTH - BOARD_SIZE) / 2; // 퍼즐판을 캔버스 중앙에 배치
+  const BOARD_OFFSET_X = (CANVAS_WIDTH - BOARD_SIZE) / 2; // 퍼즐판을 화면 중앙에 배치
   const BOARD_OFFSET_Y = 20;
   
+  // 보관소 설정 (화면 하단 중앙에 배치)
   const TRAY_COLS = 8;
   const TRAY_VISIBLE_ROWS = 2;
-  const TRAY_X = 10;
-  const TRAY_Y = BOARD_OFFSET_Y + BOARD_SIZE + 40;
-  const TRAY_WIDTH = CANVAS_WIDTH - 20;
+  const TRAY_WIDTH = 780;
+  const TRAY_X = (CANVAS_WIDTH - TRAY_WIDTH) / 2;
   const TRAY_PIECE_SIZE = (TRAY_WIDTH - 100) / TRAY_COLS;
   const TRAY_HEIGHT = (TRAY_PIECE_SIZE + 15) * TRAY_VISIBLE_ROWS + 40;
-  const CANVAS_HEIGHT = TRAY_Y + TRAY_HEIGHT + 20;
+  const TRAY_Y = CANVAS_HEIGHT - TRAY_HEIGHT - 20;
   
   // 스크롤 상태
   const trayScrollYRef = useRef(0);
@@ -292,6 +300,7 @@ const PuzzleGame = () => {
 
     // 3. 조각을 보관소에 그리드로 배치
     const spacing = 10;
+    const physics = new Map();
     pieces.forEach((piece, index) => {
       const r = Math.floor(index / TRAY_COLS);
       const c = index % TRAY_COLS;
@@ -300,12 +309,19 @@ const PuzzleGame = () => {
       
       const group = new Group(piece, { x: currentX, y: currentY });
       groups.push(group);
+      
+      // 각 그룹에 물리 속성 초기화
+      physics.set(group, {
+        vx: 0, // X 속도
+        vy: 0, // Y 속도
+      });
     });
 
     // 전체 보관소 높이 계산
     totalTrayHeightRef.current = Math.ceil(pieces.length / TRAY_COLS) * (TRAY_PIECE_SIZE + spacing) + 40;
     
     groupsRef.current = groups;
+    groupPhysicsRef.current = physics;
   };
 
   // 둥근 모서리 사각형 그리기
@@ -323,6 +339,44 @@ const PuzzleGame = () => {
     ctx.closePath();
   };
 
+  // 물리 시뮬레이션 업데이트
+  const updatePhysics = () => {
+    const time = Date.now() * 0.001; // 초 단위
+    
+    groupsRef.current.forEach((group) => {
+      // 고정된 조각은 효과 적용 안함
+      if (group.isLocked) {
+        group.floatOffset = { x: 0, y: 0 };
+        return;
+      }
+      
+      const physics = groupPhysicsRef.current.get(group);
+      if (!physics) return;
+      
+      // 1️⃣ 관성 적용 (드래그 중이 아닐 때, 일시정지가 아닐 때만)
+      if (!isPaused && group !== draggedGroupRef.current) {
+        group.position.x += physics.vx;
+        group.position.y += physics.vy;
+        
+        // 서서히 감속 (마찰)
+        physics.vx *= 0.95;
+        physics.vy *= 0.95;
+        
+        // 일정 속도 이하가 되면 완전히 멈춤
+        if (Math.abs(physics.vx) < 0.05) physics.vx = 0;
+        if (Math.abs(physics.vy) < 0.05) physics.vy = 0;
+      }
+      
+      // 2️⃣ 가만히 있을 때 흔들리는 효과 (항상 적용, 일시정지 중에도 적용)
+      // Phaser의 Sin/Cos를 활용한 부드러운 흔들림
+      const floatOffsetX = Math.sin(time * 1.5 + group.position.x * 0.01) * 2;
+      const floatOffsetY = Math.cos(time * 1.2 + group.position.y * 0.01) * 2;
+      
+      // 흔들림을 임시 오프셋으로만 적용 (실제 위치는 변경 안함)
+      group.floatOffset = { x: floatOffsetX, y: floatOffsetY };
+    });
+  };
+
   // 렌더링 함수
   const renderPuzzle = () => {
     const canvas = canvasRef.current;
@@ -331,6 +385,9 @@ const PuzzleGame = () => {
     const ctx = canvas.getContext('2d');
     const img = puzzleImageRef.current;
     const actualPieceSize = BOARD_SIZE / puzzleBody.gridSize;
+
+    // 물리 시뮬레이션 업데이트 (무중력 효과)
+    updatePhysics();
 
     // 배경 클리어
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -381,8 +438,11 @@ const PuzzleGame = () => {
 
       const isInTrayArea = group.position.y > TRAY_Y - 50 && group !== draggedGroupRef.current;
       const scale = isInTrayArea ? TRAY_PIECE_SIZE / actualPieceSize : 1;
-      const renderX = group.position.x;
-      const renderY = isInTrayArea ? group.position.y + trayScrollYRef.current : group.position.y;
+      
+      // 흔들림 효과 적용 (floatOffset)
+      const floatOffset = group.floatOffset || { x: 0, y: 0 };
+      const renderX = group.position.x + floatOffset.x;
+      const renderY = isInTrayArea ? group.position.y + trayScrollYRef.current : group.position.y + floatOffset.y;
 
       if (isInTrayArea) {
         ctx.save();
@@ -467,10 +527,11 @@ const PuzzleGame = () => {
       const snapPos = checkSnapPosition(draggedGroupRef.current);
       snapPositionRef.current = snapPos;
 
-      // 실제 드래그 중인 조각 그리기
+      // 실제 드래그 중인 조각 그리기 (흔들림 효과 포함)
+      const floatOffset = draggedGroupRef.current.floatOffset || { x: 0, y: 0 };
       draggedGroupRef.current.pieces.forEach((piece) => {
-        const wx = draggedGroupRef.current.position.x + piece.relativePos.x;
-        const wy = draggedGroupRef.current.position.y + piece.relativePos.y;
+        const wx = draggedGroupRef.current.position.x + piece.relativePos.x + floatOffset.x;
+        const wy = draggedGroupRef.current.position.y + piece.relativePos.y + floatOffset.y;
 
         ctx.save();
         drawPuzzleShape(ctx, wx, wy, piece.size, piece.edges);
@@ -812,6 +873,20 @@ const PuzzleGame = () => {
         
         draggedGroupRef.current = group;
         
+        // 드래그 시작 시 속도 초기화
+        const physics = groupPhysicsRef.current.get(group);
+        if (physics) {
+          physics.vx = 0;
+          physics.vy = 0;
+        }
+        
+        // 드래그 시작 위치 저장 (속도 계산용)
+        dragStartPosRef.current = {
+          x: group.position.x,
+          y: group.position.y,
+          time: Date.now()
+        };
+        
         // 보관소에서 꺼낼 때 실제 위치로 설정 (스크롤 보정 제거)
         // renderY는 이미 스크롤 오프셋이 적용된 위치이므로
         // 드래그 시작 시 별도의 오프셋 적용 불필요
@@ -856,14 +931,11 @@ const PuzzleGame = () => {
         maxRelY = Math.max(maxRelY, p.relativePos.y + p.size);
       });
       
-      // 캔버스 영역 제한 (조각의 50%까지 밖으로 나갈 수 있음)
-      const pieceSize = group.pieces[0].size;
-      const allowedOutside = pieceSize * 0.5;
-      
-      const minX = -minRelX - allowedOutside;
-      const maxX = CANVAS_WIDTH - maxRelX + allowedOutside;
-      const minY = -minRelY - allowedOutside;
-      const maxY = CANVAS_HEIGHT - maxRelY + allowedOutside;
+      // 화면 경계 제한 (캔버스가 화면 전체이므로 화면 어디든 가능)
+      const minX = -minRelX;
+      const maxX = CANVAS_WIDTH - maxRelX;
+      const minY = -minRelY;
+      const maxY = CANVAS_HEIGHT - maxRelY;
       
       // 경계 내로 제한
       newX = Math.max(minX, Math.min(maxX, newX));
@@ -937,6 +1009,13 @@ const PuzzleGame = () => {
           });
           activeGroup.lock();
           console.log('✅ 자동 고정 완료!');
+          
+          // 고정된 조각은 물리 효과 없음
+          const physics = groupPhysicsRef.current.get(activeGroup);
+          if (physics) {
+            physics.vx = 0;
+            physics.vy = 0;
+          }
         } else if (snapPos && !snapPos.canSnap) {
           console.log('❌ 스냅 실패 (거리 초과):', {
             pieces: activeGroup.pieces.map(p => `(${p.gridX},${p.gridY})`).join(', '),
@@ -944,6 +1023,31 @@ const PuzzleGame = () => {
             threshold: Math.round(snapPos.threshold) + 'px',
             diff: '+' + Math.round(snapPos.distance - snapPos.threshold) + 'px'
           });
+          
+          // 드래그 후 관성 적용
+          const physics = groupPhysicsRef.current.get(activeGroup);
+          if (physics) {
+            const now = Date.now();
+            const dt = now - dragStartPosRef.current.time;
+            
+            if (dt > 0 && dt < 500) { // 500ms 이내의 드래그만 고려
+              // 드래그 속도 계산
+              const dx = activeGroup.position.x - dragStartPosRef.current.x;
+              const dy = activeGroup.position.y - dragStartPosRef.current.y;
+              
+              // 속도 = 거리 / 시간 (픽셀/ms를 픽셀/프레임으로 변환)
+              physics.vx = (dx / dt) * 16 * 0.5; // 감쇠 적용
+              physics.vy = (dy / dt) * 16 * 0.5;
+              
+              // 속도 제한
+              const maxSpeed = 15;
+              const speed = Math.sqrt(physics.vx * physics.vx + physics.vy * physics.vy);
+              if (speed > maxSpeed) {
+                physics.vx = (physics.vx / speed) * maxSpeed;
+                physics.vy = (physics.vy / speed) * maxSpeed;
+              }
+            }
+          }
         }
       }
     }
@@ -974,15 +1078,17 @@ const PuzzleGame = () => {
     };
   }, [isPaused, shouldShowLoading, shouldShowError]);
 
-  // 렌더링 루프 (드래그 중 부드러운 업데이트)
+  // 렌더링 루프 (무중력 효과를 위해 항상 실행)
   useEffect(() => {
-    if (!isPaused && isLoadedRef.current) {
+    if (!isPuzzleLoading && !puzzleError && canvasRef.current) {
       const interval = setInterval(() => {
-        renderPuzzle();
+        if (isLoadedRef.current) {
+          renderPuzzle();
+        }
       }, 16); // 약 60 FPS
       return () => clearInterval(interval);
     }
-  }, [isPaused]);
+  }, [isPuzzleLoading, puzzleError]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
@@ -1134,17 +1240,11 @@ const PuzzleGame = () => {
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="bg-gray-900 bg-opacity-30 rounded-lg border-4 border-blue-500 cursor-grab active:cursor-grabbing shadow-2xl"
+            className="cursor-grab active:cursor-grabbing"
             style={{
               imageRendering: 'auto',
             }}
           />
-
-          {/* 안내 문구 */}
-          <div className="text-center text-white mt-4 pixel-font space-y-1">
-            <p className="text-lg">🧩 위쪽: 퍼즐 판 | 아래쪽: 조각 보관소</p>
-            <p className="text-sm text-gray-300">조각을 드래그해서 원래 위치에 가까이 가져다 놓으면 자동으로 붙습니다!</p>
-          </div>
         </div>
       </div>
 
