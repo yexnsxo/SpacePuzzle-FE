@@ -42,6 +42,7 @@ Authorization: Bearer {access_token}
 
 **설명:**
 - 신규 유저: `isNewUser: true`, 초기 자원 (별 0, 크레딧 20, 우주부품 0) 지급
+- 신규 유저: **기본 아이템 자동 지급** (회색 철판 벽 `wallpaper_metal_gray`, 기본 목재 조종석 `cockpit_wooden_basic`)
 - 기존 유저: `isNewUser: false`, 현재 자원 반환
 
 ---
@@ -801,6 +802,7 @@ DELETE /user/customization/remove-item
 ## ✅ 구현 체크리스트
 
 - [ ] 신규 유저 크레딧 20개 지급
+- [ ] **신규 유저 기본 아이템 자동 지급 (회색 철판 벽, 기본 목재 조종석)**
 - [ ] 별 마일스톤 보상 시스템
 - [ ] 섹터 해금 시스템
 - [ ] 데일리 퍼즐 제한

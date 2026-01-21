@@ -74,6 +74,9 @@ https://console.cloud.google.com/
    
 3-A. /tutorial (신규 유저)
      ↓ [시작하기]
+     ⚠️ 신규 유저는 자동으로 기본 아이템 지급:
+        - 회색 철판 벽 (wallpaper_metal_gray)
+        - 기본 목재 조종석 (cockpit_wooden_basic)
      
 3-B. /lobby (기존 유저)
 
@@ -148,6 +151,12 @@ Response:
   "isNewUser": true  // 또는 false
 }
 ```
+
+**신규 유저 생성 시 (`isNewUser: true`) 백엔드 처리:**
+- 초기 자원 지급: 크레딧 20, 별 0, 우주부품 0
+- 기본 아이템 자동 추가:
+  - `wallpaper_metal_gray` (회색 철판 벽) 1개
+  - `cockpit_wooden_basic` (기본 목재 조종석) 1개
 
 백엔드 팀원에게 확인하세요!
 

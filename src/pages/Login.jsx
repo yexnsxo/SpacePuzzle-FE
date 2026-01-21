@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
@@ -10,12 +11,14 @@ export const baseURL = `${import.meta.env.VITE_API_BASE_URL}`;
 const LoginPage = () => {
   const GOOGLE_CLIENT_ID = `${import.meta.env.VITE_GOOGLE_CLIENT_ID}`;
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   // 디버그: 이미지 로드 확인
   console.log('🖼️ 로그인 배경 이미지:', spaceshipInterior);
 
   const handleLogin = async (googleResp) => {
     const SERVER_URL = `${baseURL}/auth/login`;
+    setIsLoading(true); // 로딩 시작
     try {
       // 1) Google ID token → Supabase 세션 생성
       const { data, error } = await supabase.auth.signInWithIdToken({
@@ -36,46 +39,102 @@ const LoginPage = () => {
   
       localStorage.setItem("user", JSON.stringify(serverResp.data.user));
       
-      // 기본 커스터마이제이션 설정 (처음 로그인 시 또는 캐시 없을 때)
-      if (!localStorage.getItem('cachedCustomization')) {
-        const defaultCustomization = {
-          background: 'wall_gray_iron_plate',
-          cockpit: 'cockpit_wooden_basic',
-          items: [],
-        };
-        localStorage.setItem('cachedCustomization', JSON.stringify(defaultCustomization));
-        console.log('✅ 기본 커스터마이제이션 캐시 설정:', defaultCustomization);
-      }
+      // 🎯 기본 커스터마이제이션 설정 (신규/기존 모두)
+      const defaultCustomization = {
+        background: 'wall_gray_iron_plate',
+        cockpit: 'cockpit_wooden_basic',
+        items: [],
+      };
       
-      // 신규 유저인 경우 백엔드에 기본 아이템 구매 처리 (무료)
+      // 신규 유저인 경우 백엔드에 기본 설정 + 아이템 구매
       if (serverResp.data.isNewUser) {
         try {
-          // 기본 배경 구매
-          await axios.post(
-            `${baseURL}/shop/purchase`,
-            { itemId: 'wall_gray_iron_plate' },
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          ).catch(() => console.log('기본 배경 이미 보유 중'));
+          console.log('🆕 신규 유저 - 기본 아이템 및 커스터마이제이션 설정 시작');
           
-          // 기본 조종석 구매
-          await axios.post(
-            `${baseURL}/shop/purchase`,
-            { itemId: 'cockpit_wooden_basic' },
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          ).catch(() => console.log('기본 조종석 이미 보유 중'));
+          // 1. localStorage에 즉시 기본값 설정 (화면 깜빡임 방지)
+          localStorage.setItem('cachedCustomization', JSON.stringify(defaultCustomization));
+          console.log('✅ 1단계: 캐시 즉시 저장');
           
-          console.log('✅ 기본 아이템 구매 완료');
+          // 2. 기본 아이템 구매 (병렬 처리)
+          await Promise.all([
+            axios.post(
+              `${baseURL}/shop/purchase`,
+              { itemId: 'wall_gray_iron_plate' },
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            ).catch(() => console.log('기본 배경 이미 보유 중')),
+            
+            axios.post(
+              `${baseURL}/shop/purchase`,
+              { itemId: 'cockpit_wooden_basic' },
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            ).catch(() => console.log('기본 조종석 이미 보유 중'))
+          ]);
+          console.log('✅ 2단계: 기본 아이템 구매 완료');
+          
+          // 3. 백엔드에 커스터마이제이션 설정 (병렬 처리)
+          await Promise.all([
+            axios.post(
+              `${baseURL}/user/customization/set`,
+              { type: 'background', itemId: 'wall_gray_iron_plate' },
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            ).catch((err) => {
+              console.log('⚠️ 배경 설정 API 실패:', err.response?.data || err.message);
+              // wall 필드로도 시도 (백엔드 API 호환성)
+              return axios.post(
+                `${baseURL}/user/customization/set`,
+                { type: 'wall', itemId: 'wall_gray_iron_plate' },
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+              ).catch(() => console.log('wall 필드로도 실패'));
+            }),
+            
+            axios.post(
+              `${baseURL}/user/customization/set`,
+              { type: 'cockpit', itemId: 'cockpit_wooden_basic' },
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            ).catch((err) => {
+              console.log('⚠️ 조종석 설정 API 실패:', err.response?.data || err.message);
+            })
+          ]);
+          console.log('✅ 3단계: 백엔드 커스터마이제이션 설정 완료');
+          
+          // 4. 설정 완료 후 백엔드에서 다시 불러와서 확인
+          try {
+            const customizationResp = await axios.get(
+              `${baseURL}/user/customization`,
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            console.log('✅ 4단계: 백엔드에서 확인:', customizationResp.data);
+            
+            // 백엔드 응답 형식에 맞춰 캐시 업데이트
+            const finalCustomization = {
+              background: customizationResp.data.wall || customizationResp.data.background || 'wall_gray_iron_plate',
+              cockpit: customizationResp.data.cockpit || 'cockpit_wooden_basic',
+              items: customizationResp.data.items || [],
+            };
+            localStorage.setItem('cachedCustomization', JSON.stringify(finalCustomization));
+            console.log('✅ 최종 캐시 업데이트:', finalCustomization);
+          } catch (err) {
+            console.log('⚠️ 커스터마이제이션 확인 실패, 기본값 유지:', err.message);
+          }
+          
         } catch (error) {
-          console.error('기본 아이템 구매 실패:', error);
+          console.error('❌ 기본 설정 중 오류:', error);
+          // 오류가 발생해도 기본값은 캐시에 저장되어 있음
         }
         
         navigate("/tutorial");
       } else {
+        // 기존 유저 - 캐시가 없으면 기본값으로 초기화
+        if (!localStorage.getItem('cachedCustomization')) {
+          localStorage.setItem('cachedCustomization', JSON.stringify(defaultCustomization));
+          console.log('✅ 기존 유저 캐시 초기화');
+        }
         navigate("/lobby");
       }
     } catch (error) {
       console.error("로그인 실패", error);
       alert("로그인 실패");
+      setIsLoading(false); // 로딩 종료
     }
   };
 
@@ -172,6 +231,40 @@ const LoginPage = () => {
             zIndex: 10,
           }}
         />
+
+        {/* 로딩 오버레이 */}
+        {isLoading && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* 회전하는 로딩 스피너 */}
+            <div 
+              className="animate-spin"
+              style={{
+                width: '60px',
+                height: '60px',
+                border: '4px solid rgba(255, 255, 255, 0.2)',
+                borderTop: '4px solid #60a5fa',
+                borderRadius: '50%',
+                marginBottom: '20px',
+              }}
+            />
+            <p className="pixel-font text-white text-2xl mb-2">로그인 중...</p>
+            <p className="korean-font text-gray-300 text-sm">잠시만 기다려주세요</p>
+          </div>
+        )}
 
         {/* 로그인 카드 (반투명 어두운 배경) */}
         <div 

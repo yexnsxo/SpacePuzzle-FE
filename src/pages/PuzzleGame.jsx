@@ -159,7 +159,7 @@ const PuzzleGame = () => {
     }
     
     // puzzleData에서 rewardStars 가져오기, 없으면 celestialBody에서
-    const starCount = puzzleData?.rewardStars ?? celestialBody.rewardStars ?? 3;
+    const starCount = puzzleData?.rewardStars ?? celestialBody.rewardStars ?? 2;
     return '⭐'.repeat(starCount);
   };
   
@@ -862,8 +862,8 @@ const PuzzleGame = () => {
 
   // 🌟 별 개수는 천체마다 고정 (시간에 무관)
   const getFixedStars = () => {
-    // celestialBody의 rewardStars 사용 (없으면 기본값 3)
-    return celestialBody.rewardStars || 3;
+    // puzzleData 또는 celestialBody의 rewardStars 사용 (없으면 기본값 2)
+    return puzzleData?.rewardStars ?? celestialBody.rewardStars ?? 2;
   };
 
   const formatTime = (seconds) => {

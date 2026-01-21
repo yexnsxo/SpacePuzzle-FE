@@ -17,7 +17,7 @@ export const solarSystemBodies = [
     locked: false,
     cleared: true,
     requiredStars: 0,
-    rewardStars: 1,
+    rewardStars: 2, // 지구는 별 2개 보상
     image: earthImg,
     description: '우리가 살고 있는 아름다운 행성, 지구입니다.',
   },

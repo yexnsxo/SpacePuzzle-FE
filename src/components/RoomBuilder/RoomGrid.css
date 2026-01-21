@@ -1,0 +1,259 @@
+.builder-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+    pointer-events: auto;
+  }
+  
+  .toolbar {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto !important;
+  }
+
+  .toolbar button {
+    padding: 8px 16px;
+    margin: 0;
+    cursor: pointer;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  
+  .toolbar button.active {
+    background: #007bff;
+  }
+
+  .toolbar button.reset-button {
+    background: #dc3545;
+    margin-left: 20px;
+  }
+
+  .toolbar button.reset-button:hover {
+    background: #c82333;
+  }
+
+  /* 높이 레벨 선택 UI */
+  .height-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #222;
+    border-radius: 4px;
+    margin-right: 15px;
+  }
+
+  .height-selector label {
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .height-selector button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 18px;
+    font-weight: bold;
+    background: #444;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .height-selector button:hover {
+    background: #555;
+  }
+
+  .height-display {
+    color: #0ff;
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  .grid-board {
+    border: none;
+    background-color: transparent;
+    gap: 0 !important; /* 칸 사이 간격 완전 제거 */
+    line-height: 0; /* 텍스트 간격 제거 */
+    margin: 0;
+    padding: 0;
+    cursor: crosshair; /* 드래그 커서 */
+    position: fixed;
+    top: 52%;
+    left: 74%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    pointer-events: auto !important;
+  }
+  
+.grid-cell {
+  border: none; /* 기본 border 제거 */
+  margin: 0;
+  padding: 0;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden; /* 내용물이 칸을 벗어나지 않도록 */
+  pointer-events: auto !important;
+}
+
+/* 우주 공간 - 밝게 표시 */
+.grid-cell.none {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+  
+/* 바닥 스타일 */
+.grid-cell.floor {
+  background-color: #555;
+  border: 1px solid #666;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+  
+/* 벽 스타일 */
+.grid-cell.wall {
+  background-color: #999; /* 기본 색상 (인라인 스타일로 덮어쓰기 가능!) */
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #777;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+}
+
+/* 바닥 높이가 다를 때 왼쪽 경계선 */
+.grid-cell.wall.border-left {
+  border-left: 1px solid #555 !important;
+}
+
+/* 바닥 높이가 다를 때 오른쪽 경계선 */
+.grid-cell.wall.border-right {
+  border-right: 1px solid #555 !important;
+}
+
+/* 벽의 꼭대기 표시 (벽지 색 + 흰색 혼합) */
+.wall-ceiling {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px; /* 두껍게! */
+  box-sizing: border-box;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  z-index: 5;
+  /* 배경색은 Grid.tsx에서 인라인 스타일로 적용 */
+}
+
+/* 바닥 바로 위의 벽 하단 표시 (갈색 고정) */
+.wall-top {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 10px; /* 더 두껍게! */
+  background-color: #654321; /* 갈색 고정! */
+  box-sizing: border-box;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  z-index: 5;
+}
+
+/* 가구 아이템 스타일 */
+.item-sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  z-index: 10;
+  pointer-events: none;
+  font-weight: bold;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  box-sizing: border-box;
+}
+
+/* 바닥 위 아이템 (침대 등) */
+.item-sprite.floor-item {
+  background-color: rgba(100, 150, 255, 0.8);
+  border: 2px solid #0066ff;
+}
+
+/* 벽 위 아이템 (선반 등) */
+.item-sprite.wall-item {
+  background-color: rgba(255, 200, 100, 0.8);
+  border: 2px solid #ff9900;
+}
+
+/* 지우기 가능한 칸 하이라이트 */
+.grid-cell.erasable {
+  outline: 2px solid rgba(255, 100, 100, 0.6);
+  outline-offset: -2px;
+  cursor: pointer !important;
+}
+
+.grid-cell.erasable:hover {
+  outline: 2px solid rgba(255, 50, 50, 0.9);
+  background-color: rgba(255, 0, 0, 0.15) !important;
+}
+
+/* 드래그 중 시각 피드백 */
+.grid-board.dragging {
+  cursor: grabbing !important;
+}
+
+/* 드래그 중에도 이벤트는 받아야 함 */
+.grid-board.dragging .grid-cell:hover {
+  opacity: 0.9;
+}
+
+/* 고스트 프리뷰 기본 스타일 */
+.ghost-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  transition: all 0.05s ease; /* 부드러운 이동 */
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+/* 설치 가능할 때 초록색 반투명 */
+.ghost-preview.can-place {
+  background-color: rgba(0, 255, 0, 0.3);
+  border: 2px solid #00ff00;
+}
+
+/* 설치 불가능할 때 빨간색 반투명 */
+.ghost-preview.cant-place {
+  background-color: rgba(255, 0, 0, 0.3);
+  border: 2px solid #ff0000;
+}
