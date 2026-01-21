@@ -55,6 +55,15 @@ const PuzzleGame = () => {
   const location = useLocation();
   const canvasRef = useRef(null);
   
+  // 천체 데이터 (GamePlay에서 전달받음)
+  const celestialBody = location.state?.celestialBody || {
+    id: 'earth',
+    name: '지구',
+    difficulty: '쉬움',
+    gridSize: 3,
+    image: null,
+  };
+
   // 섹터 정보 및 색상
   const sectorSlug = resolveSectorSlug(
     location.state?.sectorSlug
@@ -64,15 +73,6 @@ const PuzzleGame = () => {
       || celestialBody.sector
   );
   const sectorColors = getSectorColors(sectorSlug);
-  
-  // 천체 데이터 (GamePlay에서 전달받음)
-  const celestialBody = location.state?.celestialBody || {
-    id: 'earth',
-    name: '지구',
-    difficulty: '쉬움',
-    gridSize: 3,
-    image: null,
-  };
 
   const [puzzleData, setPuzzleData] = useState(null);
   const [isPuzzleLoading, setIsPuzzleLoading] = useState(true);
