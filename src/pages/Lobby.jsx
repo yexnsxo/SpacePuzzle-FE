@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import { MILESTONES, getNextMilestone, getAchievedMilestones, getStarsNeeded } from '../data/milestones';
 import { getGuestStats, getGuestCustomization, getGuestPurchasedItems, getGuestClearedCelestials, setGuestStats, setGuestCustomization } from '../utils/guestStorage';
 import AnimatedApodWindow from '../components/AnimatedApodWindow';
+import AnimatedItem from '../components/AnimatedItem';
 import frameImage from '../assets/ui/frame.png';
 import { mapCelestialImages } from '../utils/celestialImageMapper';
 
@@ -832,9 +833,9 @@ const Lobby = () => {
         return (
           <div
             key={item.itemId}
-            className={`absolute z-30 p-4 rounded-lg transition-all ${floatClass} ${
+            className={`absolute z-30 rounded-lg transition-all ${floatClass} ${
               isEditMode
-                ? 'cursor-move bg-gray-800 bg-opacity-80 border-2 border-purple-500 hover:border-purple-300 hover:scale-110'
+                ? 'cursor-move bg-gray-800 bg-opacity-80 border-2 border-purple-500 hover:border-purple-300 hover:scale-110 p-2'
                 : 'cursor-default bg-transparent'
             }`}
             style={{
@@ -852,7 +853,11 @@ const Lobby = () => {
             } : undefined}
             title={isEditMode ? `${itemData.name} (더블클릭: 제거)` : itemData.name}
           >
-            <span className="text-4xl">{itemData.icon}</span>
+            {/* 애니메이션 아이템 렌더링 */}
+            <AnimatedItem 
+              itemId={item.itemId} 
+              size={80}
+            />
           </div>
         );
       })}
@@ -962,7 +967,13 @@ const Lobby = () => {
                       draggable
                       onDragStart={(e) => handleDragStart(itemId, e)}
                     >
-                      <span className="text-2xl">{itemData.icon}</span>
+                      {/* 애니메이션 아이템 미리보기 */}
+                      <div className="shrink-0">
+                        <AnimatedItem 
+                          itemId={itemId} 
+                          size={40}
+                        />
+                      </div>
                       <div>
                         <p className="text-white text-sm">{itemData.name}</p>
                         {isPlaced && <p className="text-green-300 text-xs">✓ 배치됨</p>}

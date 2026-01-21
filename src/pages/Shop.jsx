@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { getGuestStats, setGuestStats, getGuestPurchasedItems, setGuestPurchasedItems } from '../utils/guestStorage';
+import AnimatedItem from '../components/AnimatedItem';
 
 const Shop = () => {
   const navigate = useNavigate();
@@ -695,11 +696,28 @@ const Shop = () => {
                 >
                   {/* 아이콘 */}
                   <div className="text-center mb-4">
-                    <span className="text-6xl">{item.icon}</span>
-                    {isPurchased && (
-                      <div className="inline-block ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                        ✓ 구매완료
+                    {/* 배치 가능한 아이템(item)은 애니메이션, 나머지는 이모지 */}
+                    {item.category === 'item' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <AnimatedItem 
+                          itemId={item.id} 
+                          size={96}
+                        />
+                        {isPurchased && (
+                          <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                            ✓ 구매완료
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <>
+                        <span className="text-6xl">{item.icon}</span>
+                        {isPurchased && (
+                          <div className="inline-block ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                            ✓ 구매완료
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
