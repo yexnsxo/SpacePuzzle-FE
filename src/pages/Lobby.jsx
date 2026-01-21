@@ -727,19 +727,11 @@ const Lobby = () => {
     cockpit_antigravity_command: { name: '반중력 커맨드 포드', icon: '🛸', category: 'cockpit' },
     cockpit_item_star_wand: { name: '마법소녀 스타 완드', icon: '⭐', category: 'cockpit' },
     
-    // 배치 아이템 (기존 유지)
-    item_plant: { name: '우주 식물', icon: '🌿', category: 'item' },
-    item_poster: { name: '은하 포스터', icon: '🖼️', category: 'item' },
-    item_lamp: { name: '네온 램프', icon: '💡', category: 'item' },
-    item_telescope: { name: '망원경', icon: '🔭', category: 'item' },
-    item_robot: { name: 'AI 로봇', icon: '🤖', category: 'item' },
-    item_hologram: { name: '홀로그램', icon: '📺', category: 'item' },
-    item_music: { name: '음악 플레이어', icon: '🎵', category: 'item' },
-    item_aquarium: { name: '우주 수족관', icon: '🐠', category: 'item' },
-    item_gravitylamp: { name: '무중력 램프', icon: '🕯️', category: 'item' },
-    ai_robot_arm: { name: 'AI 로봇 팔', icon: '🦾', category: 'item' },
-    item_chair: { name: '편안한 의자', icon: '🪑', category: 'item' },
-    item_desk: { name: '작업 책상', icon: '🗄️', category: 'item' },
+    // 배치 아이템 (애니메이션 - assets/item 폴더)
+    item_floating_saturn_planter: { name: '떠다니는 토성 화분', icon: '🪴', category: 'item' },
+    item_industrial_toolbox_greasy: { name: '산업용 공구 상자', icon: '🧰', category: 'item' },
+    item_flying_bird: { name: '날아다니는 새', icon: '🐦', category: 'item' },
+    item_cute_stardust_jar: { name: '귀여운 별가루 병', icon: '✨', category: 'item' },
   };
 
   return (
