@@ -70,7 +70,7 @@ const solarSystemImages = {
 /**
  * 천체 데이터에 이미지 URL 추가
  * @param {Array} celestials - 백엔드에서 받은 천체 배열
- * @returns {Array} - 이미지 URL이 추가된 천체 배열
+ * @returns {Promise<Array>} - 이미지 URL이 추가된 천체 배열
  */
 export const mapCelestialImages = async (celestials) => {
   console.log('🗺️ 이미지 매핑 시작, 천체 개수:', celestials.length);
