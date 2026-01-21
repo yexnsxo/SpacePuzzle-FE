@@ -1822,40 +1822,46 @@ const PuzzleGame = () => {
           const dx = (star.left - 50) * 30;
           const dy = (star.top - 50) * 30;
           
+          const starStyle = /** @type {import('react').CSSProperties & { ['--tx']: string, ['--ty']: string }} */ ({
+            width: star.width + 'px',
+            height: star.height + 'px',
+            top: star.top + '%',
+            left: star.left + '%',
+            opacity: star.opacity,
+            '--tx': `${dx}vw`,
+            '--ty': `${dy}vh`,
+            animationDelay: star.isTwinkling && !isPuzzleLoading ? `${star.animationDelay}s` : undefined,
+          });
+
           return (
             <div
               key={i}
               className={`absolute bg-white rounded-full ${isPuzzleLoading ? 'warp-star' : star.isTwinkling ? 'star-twinkle' : ''}`}
-              style={{
-                width: star.width + 'px',
-                height: star.height + 'px',
-                top: star.top + '%',
-                left: star.left + '%',
-                opacity: star.opacity,
-                '--tx': `${dx}vw`,
-                '--ty': `${dy}vh`,
-                animationDelay: star.isTwinkling && !isPuzzleLoading ? `${star.animationDelay}s` : undefined,
-              }}
+              style={starStyle}
             />
           );
         })}
         
         {/* 로딩 중 계속 생성되는 별들 */}
-        {continuousStars.map((star) => (
+        {continuousStars.map((star) => {
+          const starStyle = /** @type {import('react').CSSProperties & { ['--tx']: string, ['--ty']: string }} */ ({
+            width: star.size + 'px',
+            height: star.size + 'px',
+            top: star.top + '%',
+            left: star.left + '%',
+            opacity: star.opacity,
+            '--tx': `${star.dx}vw`,
+            '--ty': `${star.dy}vh`,
+          });
+
+          return (
           <div
             key={`continuous-${star.id}`}
             className="absolute bg-white rounded-full warp-star"
-            style={{
-              width: star.size + 'px',
-              height: star.size + 'px',
-              top: star.top + '%',
-              left: star.left + '%',
-              opacity: star.opacity,
-              '--tx': `${star.dx}vw`,
-              '--ty': `${star.dy}vh`,
-            }}
+            style={starStyle}
           />
-        ))}
+          );
+        })}
       </div>
       
       {shouldShowLoading ? (
