@@ -75,6 +75,8 @@ const AnimatedNebula = ({ nebulaName, size = 400, isSelected = false, isCleared 
     return () => clearInterval(interval);
   }, [spriteData]);
 
+  const visualFilter = isCleared ? 'none' : 'grayscale(100%) brightness(0.7)';
+
   // 캔버스에 현재 프레임 그리기
   useEffect(() => {
     if (!spriteData || !imageRef.current || !canvasRef.current) return;
@@ -89,15 +91,6 @@ const AnimatedNebula = ({ nebulaName, size = 400, isSelected = false, isCleared 
     // 캔버스 클리어
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 클리어 상태에 따른 필터 적용
-    if (isCleared) {
-      // 클리어됨: 컬러 (필터 없음)
-      ctx.filter = 'none';
-    } else {
-      // 클리어 안됨: 흑백
-      ctx.filter = 'grayscale(100%) brightness(0.7)';
-    }
-
     // 스프라이트시트에서 현재 프레임 추출하여 그리기
     ctx.drawImage(
       imageRef.current,
@@ -110,10 +103,7 @@ const AnimatedNebula = ({ nebulaName, size = 400, isSelected = false, isCleared 
       canvas.width,
       canvas.height
     );
-
-    // 필터 리셋 (다음 그리기에 영향 없도록)
-    ctx.filter = 'none';
-  }, [currentFrame, spriteData, isCleared]);
+  }, [currentFrame, spriteData]);
 
   return (
     <div
@@ -134,6 +124,7 @@ const AnimatedNebula = ({ nebulaName, size = 400, isSelected = false, isCleared 
           width: '100%',
           height: '100%',
           imageRendering: 'pixelated',
+          filter: visualFilter,
         }}
         className={`${isSelected ? 'animate-pulse' : ''}`}
       />
