@@ -29,13 +29,40 @@ const createSeededRng = (seed) => {
   };
 };
 
+const SECTOR_SLUGS = {
+  'solar-system': 'solar-system',
+  '태양계': 'solar-system',
+  'exoplanet-systems': 'exoplanet-systems',
+  'exo-systems': 'exoplanet-systems',
+  '외계 행성계': 'exoplanet-systems',
+  'nebulae': 'nebulae',
+  '성운': 'nebulae',
+  'galaxies': 'galaxies',
+  '은하': 'galaxies',
+  'deep-space-extremes': 'deep-space-extremes',
+  '우주의 심연': 'deep-space-extremes',
+};
+
+const resolveSectorSlug = (value) => {
+  if (!value || typeof value !== 'string') {
+    return 'solar-system';
+  }
+  return SECTOR_SLUGS[value] || 'solar-system';
+};
+
 const PuzzleGame = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const canvasRef = useRef(null);
   
   // 섹터 정보 및 색상
-  const sectorSlug = location.state?.sectorSlug || 'solar-system';
+  const sectorSlug = resolveSectorSlug(
+    location.state?.sectorSlug
+      || location.state?.celestialBody?.sectorSlug
+      || celestialBody.sectorSlug
+      || location.state?.celestialBody?.sector
+      || celestialBody.sector
+  );
   const sectorColors = getSectorColors(sectorSlug);
   
   // 천체 데이터 (GamePlay에서 전달받음)
@@ -452,7 +479,7 @@ const PuzzleGame = () => {
       } else {
         navigate('/gameplay', {
           state: {
-            sectorSlug: location.state?.sectorSlug,
+            sectorSlug,
           },
         });
       }
@@ -851,7 +878,7 @@ const PuzzleGame = () => {
           alert(`🎉 퍼즐 완성! 축하합니다!\n\n⏱️ 클리어 시간: ${mins}분 ${secs}초\n⭐ 획득한 별: ${starsEarned}개`);
           navigate('/gameplay', {
             state: {
-              sectorSlug: location.state?.sectorSlug,
+              sectorSlug,
               refreshKey: Date.now(),
             },
           });
@@ -923,11 +950,15 @@ const PuzzleGame = () => {
       } catch (error) {
         console.error('❌ 저장 상태 삭제 실패:', error);
       }
-      navigate('/gameplay', {
-        state: {
-          sectorSlug: location.state?.sectorSlug,
-        },
-      });
+      if (celestialBody.isApod || nasaIdFromState === 'apod') {
+        navigate('/lobby');
+      } else {
+        navigate('/gameplay', {
+          state: {
+            sectorSlug,
+          },
+        });
+      }
     }
   };
 
@@ -1844,7 +1875,7 @@ const PuzzleGame = () => {
               type="button"
               onClick={() => navigate('/gameplay', {
                 state: {
-                  sectorSlug: location.state?.sectorSlug,
+                  sectorSlug,
                 },
               })}
               className="korean-font text-xl bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 border-4 border-blue-400 transition-all"
@@ -1872,7 +1903,7 @@ const PuzzleGame = () => {
               } else {
                 navigate('/gameplay', {
                   state: {
-                    sectorSlug: location.state?.sectorSlug,
+                    sectorSlug,
                   },
                 });
               }
