@@ -250,6 +250,17 @@ const GamePlay = () => {
   const sectorSlug = resolveSectorSlug(location.state?.sectorSlug || location.state?.sector);
   const sectorColors = getSectorColors(sectorSlug);
   const refreshKey = location.state?.refreshKey;
+  const justClearedId = location.state?.justClearedId;
+  const justClearedNasaId = location.state?.justClearedNasaId;
+
+  const applyJustCleared = (body) => {
+    if (!justClearedId && !justClearedNasaId) return body;
+    const matches =
+      (justClearedId && body.id === justClearedId)
+      || (justClearedNasaId && body.nasaId === justClearedNasaId);
+    if (!matches || body.isCleared) return body;
+    return { ...body, isCleared: true };
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -312,6 +323,7 @@ const GamePlay = () => {
                   isCleared: isCleared,
                 };
               })
+              .map(applyJustCleared)
               .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
           }
         } catch (backendError) {
@@ -321,7 +333,8 @@ const GamePlay = () => {
         // 🔧 백엔드 데이터가 없으면 더미 데이터 사용
         if (normalizedBodies.length === 0 && DUMMY_CELESTIAL_DATA[sectorSlug]) {
           console.log(`📦 ${sectorSlug} 섹터의 더미 데이터 사용`);
-          normalizedBodies = DUMMY_CELESTIAL_DATA[sectorSlug].map((body) => {
+          normalizedBodies = DUMMY_CELESTIAL_DATA[sectorSlug]
+            .map((body) => {
             const difficultyValue = Number(body.difficulty);
             
             // 🔧 게스트 모드일 때는 localStorage 기록 확인
@@ -337,7 +350,8 @@ const GamePlay = () => {
               difficultyKo: DIFFICULTY_LABELS[difficultyValue] || '보통',
               isCleared: isCleared,
             };
-          });
+            })
+            .map(applyJustCleared);
         }
 
         if (isMounted) {

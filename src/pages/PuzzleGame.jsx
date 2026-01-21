@@ -880,6 +880,8 @@ const PuzzleGame = () => {
             state: {
               sectorSlug,
               refreshKey: Date.now(),
+              justClearedId: celestialBody.id,
+              justClearedNasaId: nasaIdFromState,
             },
           });
         }
